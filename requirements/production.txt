@@ -1,0 +1,5 @@
+-r base.txt
+gunicorn==23.0.0
+uvicorn[standard]==0.32.1
+sentry-sdk[django]==2.18.0
+django-storages[s3]==1.14.4

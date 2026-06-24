@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Logs — {{ project.name }} — EKAFY{% endblock %}
+{% block page_title %}Logs / {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-4">
+
+  <!-- Controls -->
+  <div class="flex flex-wrap items-center gap-3">
+    <!-- Log type tabs -->
+    <div class="flex bg-surface-800 border border-surface-600 rounded-lg p-1 gap-1">
+      {% for t, label in forloop.parentloop.counter|default:0 %}{% endfor %}
+      {% with types="journal,nginx_access,nginx_error" %}
+      {% for t in "journal,nginx_access,nginx_error"|split:"," %}
+      <a href="?type={{ t }}&lines={{ lines }}&search={{ search }}"
+         hx-get="?type={{ t }}&lines={{ lines }}&search={{ search }}"
+         hx-target="#log-content"
+         hx-push-url="true"
+         class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors
+                {% if log_type == t %}bg-brand-600 text-white{% else %}text-surface-400 hover:text-gray-200 hover:bg-surface-700{% endif %}">
+        {% if t == 'journal' %}systemd Journal{% elif t == 'nginx_access' %}Nginx Access{% elif t == 'nginx_error' %}Nginx Error{% endif %}
+      </a>
+      {% endfor %}
+      {% endwith %}
+    </div>
+
+    <!-- Lines selector -->
+    <select id="lines-select" name="lines"
+            class="bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-brand-500"
+            hx-get=""
+            hx-trigger="change"
+            hx-include="#search-input"
+            hx-target="#log-content">
+      {% for n in "50,100,200,500,1000"|split:"," %}
+      <option value="{{ n }}" {% if lines == n|add:0 %}selected{% endif %}>{{ n }} lines</option>
+      {% endfor %}
+    </select>
+
+    <!-- Search -->
+    <div class="flex-1 min-w-48">
+      <input type="text" id="search-input" name="search" value="{{ search }}"
+             placeholder="Filter log lines…"
+             class="w-full bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-brand-500 font-mono"
+             hx-get=""
+             hx-trigger="keyup changed delay:400ms"
+             hx-include="#lines-select"
+             hx-target="#log-content">
+    </div>
+
+    <!-- Live stream button -->
+    <a href="{% url 'logs:stream' project.slug %}"
+       target="_blank"
+       class="flex items-center gap-2 px-3 py-1.5 bg-surface-700 border border-surface-600 rounded-lg text-xs text-gray-300 hover:text-brand-400 hover:border-brand-600/50 transition-all">
+      <span class="w-1.5 h-1.5 rounded-full bg-red-400 status-pulse"></span>
+      Live Stream
+    </a>
+  </div>
+
+  <!-- Log terminal -->
+  <div class="bg-surface-900 border border-surface-600 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 bg-surface-800 border-b border-surface-700">
+      <span class="text-xs font-semibold text-surface-400 uppercase tracking-wider">{{ log_type }} • {{ project.systemd_service }}</span>
+      <span class="htmx-indicator text-xs text-brand-400">Loading…</span>
+    </div>
+    <div id="log-content" class="log-terminal p-5 min-h-96 max-h-[70vh] overflow-y-auto">
+      {% include "logs/_log_content.html" %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

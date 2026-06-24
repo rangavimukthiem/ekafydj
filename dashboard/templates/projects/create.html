@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}New Project — EKAFY{% endblock %}
+{% block page_title %}Projects / New Project{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-surface-800 border border-surface-600 rounded-2xl overflow-hidden">
+
+    <!-- Header -->
+    <div class="px-6 py-5 border-b border-surface-700 bg-gradient-to-r from-brand-900/20 to-purple-900/20">
+      <h1 class="text-xl font-bold text-gray-100">Create New Project</h1>
+      <p class="text-sm text-surface-400 mt-1">EKAFY will scaffold the filesystem, database, systemd service, and nginx config automatically.</p>
+    </div>
+
+    <!-- Form -->
+    <form method="post" action="{% url 'projects:create' %}" class="divide-y divide-surface-700">
+      {% csrf_token %}
+
+      <div class="px-6 py-5 space-y-5">
+        <h2 class="text-xs font-semibold text-surface-400 uppercase tracking-wider">Identity</h2>
+
+        <!-- Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_name">Project Name <span class="text-red-400">*</span></label>
+          <input type="text" id="id_name" name="name" value="{{ form.name.value|default:'' }}"
+                 class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                 placeholder="My Django App" required>
+          {% if form.name.errors %}<p class="mt-1 text-xs text-red-400">{{ form.name.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_description">Description</label>
+          <textarea id="id_description" name="description" rows="2"
+                    class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors resize-none"
+                    placeholder="What does this project do?">{{ form.description.value|default:'' }}</textarea>
+        </div>
+      </div>
+
+      <div class="px-6 py-5 space-y-5">
+        <h2 class="text-xs font-semibold text-surface-400 uppercase tracking-wider">Repository</h2>
+
+        <!-- Git URL -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_git_url">Git URL <span class="text-red-400">*</span></label>
+          <input type="text" id="id_git_url" name="git_url" value="{{ form.git_url.value|default:'' }}"
+                 class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                 placeholder="git@github.com:user/repo.git" required>
+          {% if form.git_url.errors %}<p class="mt-1 text-xs text-red-400">{{ form.git_url.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Branch -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_git_branch">Branch</label>
+          <input type="text" id="id_git_branch" name="git_branch" value="{{ form.git_branch.value|default:'main' }}"
+                 class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
+                 placeholder="main">
+        </div>
+      </div>
+
+      <div class="px-6 py-5 space-y-5">
+        <h2 class="text-xs font-semibold text-surface-400 uppercase tracking-wider">Infrastructure</h2>
+
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Python Version -->
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_python_version">Python Version</label>
+            <select id="id_python_version" name="python_version"
+                    class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm focus:outline-none focus:border-brand-500 transition-colors">
+              {% for val, label in form.fields.python_version.choices %}
+              <option value="{{ val }}" {% if form.python_version.value == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Gunicorn Workers -->
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_gunicorn_workers">Gunicorn Workers</label>
+            <input type="number" id="id_gunicorn_workers" name="gunicorn_workers" value="{{ form.gunicorn_workers.value|default:3 }}" min="1" max="32"
+                   class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm focus:outline-none focus:border-brand-500 transition-colors">
+          </div>
+        </div>
+
+        <!-- Domain -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_domain">Domain (optional)</label>
+          <input type="text" id="id_domain" name="domain" value="{{ form.domain.value|default:'' }}"
+                 class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm font-mono focus:outline-none focus:border-brand-500 transition-colors"
+                 placeholder="app.example.com">
+          <p class="mt-1 text-xs text-surface-500">If provided, an nginx server block will be created automatically.</p>
+        </div>
+
+        <!-- Django settings module -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1.5" for="id_django_settings_module">Django Settings Module</label>
+          <input type="text" id="id_django_settings_module" name="django_settings_module"
+                 value="{{ form.django_settings_module.value|default:'config.settings.production' }}"
+                 class="w-full bg-surface-700 border border-surface-500 rounded-lg px-3 py-2.5 text-gray-100 text-sm font-mono focus:outline-none focus:border-brand-500 transition-colors">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="px-6 py-5 flex items-center justify-between bg-surface-800/50">
+        <a href="{% url 'projects:list' %}" class="text-sm text-surface-400 hover:text-gray-200 transition-colors">← Cancel</a>
+        <button type="submit"
+                class="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Create Project
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

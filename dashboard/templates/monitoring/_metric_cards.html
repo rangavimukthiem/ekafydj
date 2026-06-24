@@ -1,0 +1,29 @@
+<!-- HTMX partial: service status badge for topbar polling -->
+{% load humanize %}
+{% if metric %}
+<div id="system-health"
+     hx-get="{% url 'monitoring:current' %}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML"
+     hx-target="#system-health"
+     class="flex items-center gap-3 text-xs text-surface-400">
+  <span class="flex items-center gap-1.5">
+    <span class="w-2 h-2 rounded-full {% if metric.cpu_percent > 80 %}bg-red-400{% elif metric.cpu_percent > 60 %}bg-yellow-400{% else %}bg-green-400{% endif %}"></span>
+    CPU {{ metric.cpu_percent|floatformat:0 }}%
+  </span>
+  <span class="text-surface-600">|</span>
+  <span>RAM {{ metric.memory_percent|floatformat:0 }}%</span>
+  <span class="text-surface-600">|</span>
+  <span>Disk {{ metric.disk_percent|floatformat:0 }}%</span>
+</div>
+{% else %}
+<div id="system-health"
+     hx-get="{% url 'monitoring:current' %}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML"
+     hx-target="#system-health"
+     class="flex items-center gap-2 text-xs text-surface-500">
+  <span class="w-2 h-2 rounded-full bg-surface-600"></span>
+  <span>No metrics yet</span>
+</div>
+{% endif %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Monitoring — EKAFY{% endblock %}
+{% block page_title %}System Monitoring{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Live Metrics Row -->
+  <div id="live-metrics"
+       hx-get="{% url 'monitoring:current' %}"
+       hx-trigger="load, every 15s"
+       hx-swap="innerHTML"
+       hx-target="#live-metrics">
+    {% if metric %}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- CPU -->
+      <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-surface-400 uppercase tracking-wider font-semibold">CPU</span>
+          <span class="text-2xl font-bold {% if metric.cpu_percent > 80 %}text-red-400{% elif metric.cpu_percent > 60 %}text-yellow-400{% else %}text-green-400{% endif %}">
+            {{ metric.cpu_percent|floatformat:1 }}%
+          </span>
+        </div>
+        <div class="w-full bg-surface-700 rounded-full h-2">
+          <div class="h-2 rounded-full transition-all duration-500 {% if metric.cpu_percent > 80 %}bg-red-500{% elif metric.cpu_percent > 60 %}bg-yellow-500{% else %}bg-green-500{% endif %}"
+               style="width: {{ metric.cpu_percent }}%"></div>
+        </div>
+        <p class="text-xs text-surface-500 mt-2">Load: {{ metric.load_avg_1|floatformat:2 }} {{ metric.load_avg_5|floatformat:2 }} {{ metric.load_avg_15|floatformat:2 }}</p>
+      </div>
+
+      <!-- Memory -->
+      <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-surface-400 uppercase tracking-wider font-semibold">Memory</span>
+          <span class="text-2xl font-bold {% if metric.memory_percent > 85 %}text-red-400{% elif metric.memory_percent > 70 %}text-yellow-400{% else %}text-brand-400{% endif %}">
+            {{ metric.memory_percent|floatformat:1 }}%
+          </span>
+        </div>
+        <div class="w-full bg-surface-700 rounded-full h-2">
+          <div class="h-2 rounded-full transition-all duration-500 {% if metric.memory_percent > 85 %}bg-red-500{% elif metric.memory_percent > 70 %}bg-yellow-500{% else %}bg-brand-500{% endif %}"
+               style="width: {{ metric.memory_percent }}%"></div>
+        </div>
+        <p class="text-xs text-surface-500 mt-2">{{ metric.memory_used }} / {{ metric.memory_total }}</p>
+      </div>
+
+      <!-- Disk -->
+      <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-surface-400 uppercase tracking-wider font-semibold">Disk</span>
+          <span class="text-2xl font-bold {% if metric.disk_percent > 90 %}text-red-400{% elif metric.disk_percent > 75 %}text-yellow-400{% else %}text-purple-400{% endif %}">
+            {{ metric.disk_percent|floatformat:1 }}%
+          </span>
+        </div>
+        <div class="w-full bg-surface-700 rounded-full h-2">
+          <div class="h-2 rounded-full transition-all duration-500 {% if metric.disk_percent > 90 %}bg-red-500{% elif metric.disk_percent > 75 %}bg-yellow-500{% else %}bg-purple-500{% endif %}"
+               style="width: {{ metric.disk_percent }}%"></div>
+        </div>
+        <p class="text-xs text-surface-500 mt-2">{{ metric.disk_used }} / {{ metric.disk_total }}</p>
+      </div>
+
+      <!-- Projects Health -->
+      <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+        <p class="text-xs text-surface-400 uppercase tracking-wider font-semibold mb-3">Projects</p>
+        <div class="space-y-2">
+          {% for project in projects %}
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-300 truncate max-w-28">{{ project.name }}</span>
+            {% if project.is_healthy is True %}
+              <span class="flex items-center gap-1 text-xs text-green-400"><span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>OK</span>
+            {% elif project.is_healthy is False %}
+              <span class="flex items-center gap-1 text-xs text-red-400"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>Down</span>
+            {% else %}
+              <span class="flex items-center gap-1 text-xs text-surface-400"><span class="w-1.5 h-1.5 rounded-full bg-surface-500"></span>—</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Chart -->
+  <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-gray-200">Resource Usage (Last 6h)</h2>
+      <select id="chart-hours" class="bg-surface-700 border border-surface-600 rounded-lg px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-brand-500">
+        <option value="1">1 hour</option>
+        <option value="6" selected>6 hours</option>
+        <option value="24">24 hours</option>
+      </select>
+    </div>
+    <canvas id="metrics-chart" class="w-full" height="120"></canvas>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ctx = document.getElementById('metrics-chart');
+let chart;
+
+async function loadChart(hours) {
+  const res = await fetch(`{% url 'monitoring:api-metrics' %}?hours=${hours}`);
+  const data = await res.json();
+  const labels = data.metrics.map(m => new Date(m.t).toLocaleTimeString());
+  const cpu = data.metrics.map(m => m.cpu);
+  const mem = data.metrics.map(m => m.mem);
+  const disk = data.metrics.map(m => m.disk);
+
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'CPU %', data: cpu, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.08)', tension: 0.4, pointRadius: 0 },
+        { label: 'RAM %', data: mem, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.08)', tension: 0.4, pointRadius: 0 },
+        { label: 'Disk %', data: disk, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.08)', tension: 0.4, pointRadius: 0 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#484f58', maxTicksLimit: 12 }, grid: { color: '#21262d' } },
+        y: { min: 0, max: 100, ticks: { color: '#484f58', callback: v => v + '%' }, grid: { color: '#21262d' } }
+      }
+    }
+  });
+}
+
+loadChart(6);
+document.getElementById('chart-hours').addEventListener('change', e => loadChart(e.target.value));
+</script>
+{% endblock %}

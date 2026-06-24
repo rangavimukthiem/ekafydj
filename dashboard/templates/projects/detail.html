@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — EKAFY{% endblock %}
+{% block page_title %}Projects / {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ confirmDelete: false }">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <h1 class="text-2xl font-bold text-gray-100">{{ project.name }}</h1>
+        <!-- Status badge -->
+        {% if project.status == 'active' %}
+          <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-900/40 text-green-300 border border-green-700/40">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-400 status-pulse"></span> Active
+          </span>
+        {% elif project.status == 'failed' %}
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-900/40 text-red-300 border border-red-700/40">Failed</span>
+        {% elif project.status == 'stopped' %}
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-600 text-surface-300 border border-surface-500">Stopped</span>
+        {% else %}
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-900/40 text-yellow-300 border border-yellow-700/40">{{ project.get_status_display }}</span>
+        {% endif %}
+      </div>
+      {% if project.domain %}<p class="text-sm text-surface-400 font-mono">{{ project.domain }}</p>{% endif %}
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex items-center gap-2">
+      {% if project.status == 'active' %}
+      <form method="post" action="{% url 'services:control' project.slug 'restart' %}">{% csrf_token %}
+        <button class="px-3 py-1.5 text-sm font-medium rounded-lg bg-yellow-900/30 text-yellow-400 border border-yellow-700/40 hover:bg-yellow-900/50 transition-colors">↺ Restart</button>
+      </form>
+      <form method="post" action="{% url 'services:control' project.slug 'stop' %}">{% csrf_token %}
+        <button class="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-900/30 text-red-400 border border-red-700/40 hover:bg-red-900/50 transition-colors">■ Stop</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'services:control' project.slug 'start' %}">{% csrf_token %}
+        <button class="px-3 py-1.5 text-sm font-medium rounded-lg bg-green-900/30 text-green-400 border border-green-700/40 hover:bg-green-900/50 transition-colors">▶ Start</button>
+      </form>
+      {% endif %}
+
+      <form method="post" action="{% url 'deployments:trigger' project.slug %}">{% csrf_token %}
+        <button class="px-3 py-1.5 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-500 transition-colors">↑ Deploy</button>
+      </form>
+
+      <a href="{% url 'projects:edit' project.slug %}" class="px-3 py-1.5 text-sm font-medium rounded-lg bg-surface-700 text-gray-300 hover:bg-surface-600 transition-colors">Edit</a>
+    </div>
+  </div>
+
+  <!-- Info Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+    <!-- Git -->
+    <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+      <h3 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Repository</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-surface-400">URL</span><span class="font-mono text-xs text-gray-300 truncate ml-2 max-w-[180px]">{{ project.git_url }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">Branch</span><span class="text-brand-400 font-mono text-xs">{{ project.git_branch }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">Python</span><span class="text-gray-300">{{ project.python_version }}</span></div>
+      </div>
+    </div>
+
+    <!-- Database -->
+    <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+      <h3 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Database</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-surface-400">Name</span><span class="font-mono text-xs text-gray-300">{{ project.db_name }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">User</span><span class="font-mono text-xs text-gray-300">{{ project.db_user }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">Host</span><span class="text-gray-300 text-xs">{{ project.db_host }}:{{ project.db_port }}</span></div>
+      </div>
+    </div>
+
+    <!-- Infrastructure -->
+    <div class="bg-surface-800 border border-surface-600 rounded-xl p-5">
+      <h3 class="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3">Infrastructure</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="text-surface-400">Service</span><span class="font-mono text-xs text-gray-300">{{ project.systemd_service }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">Workers</span><span class="text-gray-300">{{ project.gunicorn_workers }}</span></div>
+        <div class="flex justify-between"><span class="text-surface-400">Health</span>
+          {% if project.is_healthy is True %}<span class="text-green-400 text-xs">✓ Healthy</span>
+          {% elif project.is_healthy is False %}<span class="text-red-400 text-xs">✗ Unhealthy</span>
+          {% else %}<span class="text-surface-400 text-xs">Unknown</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="flex flex-wrap gap-3">
+    <a href="{% url 'logs:viewer' project.slug %}" class="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-gray-300 hover:border-brand-600/50 hover:text-brand-400 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      View Logs
+    </a>
+    <a href="{% url 'deployments:list' %}?project={{ project.slug }}" class="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-gray-300 hover:border-brand-600/50 hover:text-brand-400 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      Deployments
+    </a>
+    <form method="post" action="{% url 'backups:trigger' project.slug %}">{% csrf_token %}
+      <input type="hidden" name="backup_type" value="db">
+      <button type="submit" class="flex items-center gap-2 px-4 py-2 bg-surface-800 border border-surface-600 rounded-lg text-sm text-gray-300 hover:border-brand-600/50 hover:text-brand-400 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+        Backup Now
+      </button>
+    </form>
+  </div>
+
+  <!-- Recent Deployments -->
+  {% if recent_deployments %}
+  <div class="bg-surface-800 border border-surface-600 rounded-xl overflow-hidden">
+    <div class="px-5 py-4 border-b border-surface-700 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-200">Recent Deployments</h3>
+      <a href="{% url 'deployments:list' %}?project={{ project.slug }}" class="text-xs text-brand-400 hover:text-brand-300">View all →</a>
+    </div>
+    <div class="divide-y divide-surface-700">
+      {% for dep in recent_deployments %}
+      <div class="px-5 py-3 flex items-center justify-between hover:bg-surface-750 transition-colors">
+        <div class="flex items-center gap-3">
+          {% if dep.status == 'success' %}<span class="w-2 h-2 rounded-full bg-green-400"></span>
+          {% elif dep.status == 'failed' %}<span class="w-2 h-2 rounded-full bg-red-400"></span>
+          {% elif dep.status == 'running' %}<span class="w-2 h-2 rounded-full bg-brand-400 status-pulse"></span>
+          {% else %}<span class="w-2 h-2 rounded-full bg-surface-400"></span>{% endif %}
+          <div>
+            <p class="text-sm text-gray-200 font-mono">{{ dep.short_commit }}</p>
+            <p class="text-xs text-surface-400">{{ dep.commit_message|truncatechars:50 }}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-surface-400">{{ dep.created_at|timesince }} ago</p>
+          {% if dep.duration_seconds %}<p class="text-xs text-surface-500">{{ dep.duration_seconds|floatformat:0 }}s</p>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Danger Zone -->
+  {% if user.is_admin %}
+  <div class="bg-red-950/20 border border-red-800/30 rounded-xl p-5">
+    <h3 class="text-sm font-semibold text-red-400 mb-3">Danger Zone</h3>
+    <div class="flex items-center gap-3">
+      <form method="post" action="{% url 'projects:archive' project.slug %}">{% csrf_token %}
+        <button class="px-3 py-1.5 text-sm text-orange-400 border border-orange-700/40 rounded-lg hover:bg-orange-900/20 transition-colors">Archive Project</button>
+      </form>
+      <button @click="confirmDelete = true" class="px-3 py-1.5 text-sm text-red-400 border border-red-700/40 rounded-lg hover:bg-red-900/20 transition-colors">Delete from DB</button>
+    </div>
+
+    <!-- Confirm delete modal -->
+    <div x-show="confirmDelete" x-transition class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+      <div class="bg-surface-800 border border-red-700/40 rounded-2xl p-6 max-w-sm w-full mx-4">
+        <h4 class="text-lg font-semibold text-gray-100 mb-2">Delete "{{ project.name }}"?</h4>
+        <p class="text-sm text-surface-400 mb-6">This removes the database record only. VPS files will not be touched. This action cannot be undone.</p>
+        <div class="flex gap-3">
+          <form method="post" action="{% url 'projects:delete' project.slug %}" class="flex-1">{% csrf_token %}
+            <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors">Delete</button>
+          </form>
+          <button @click="confirmDelete = false" class="flex-1 px-4 py-2 bg-surface-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-surface-600 transition-colors">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

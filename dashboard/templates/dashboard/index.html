@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Overview — EKAFY{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+  <!-- Hero Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% include "components/stat_card.html" with title="Total Projects" value=total_count icon="folder" color="blue" %}
+    {% include "components/stat_card.html" with title="Active" value=active_count icon="check-circle" color="green" %}
+    {% include "components/stat_card.html" with title="Failed" value=failed_count icon="x-circle" color="red" %}
+    <div id="metric-cpu" hx-get="{% url 'monitoring:current' %}" hx-trigger="load, every 30s" hx-swap="outerHTML">
+      {% include "components/stat_card.html" with title="CPU" value="—" icon="cpu" color="purple" %}
+    </div>
+  </div>
+
+  <!-- Projects Grid -->
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-gray-100">Projects</h2>
+      <a href="{% url 'projects:create' %}"
+         class="flex items-center gap-2 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium rounded-lg transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        New Project
+      </a>
+    </div>
+
+    {% if projects %}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for project in projects %}
+      <div class="card-hover group relative bg-surface-800 border border-surface-600 rounded-xl p-5 hover:border-brand-600/50 transition-all">
+
+        <!-- Status indicator -->
+        <div class="absolute top-4 right-4">
+          {% if project.status == 'active' %}
+            <span class="flex items-center gap-1.5 text-xs text-green-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-green-400 status-pulse"></span> Active
+            </span>
+          {% elif project.status == 'stopped' %}
+            <span class="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-gray-400"></span> Stopped
+            </span>
+          {% elif project.status == 'failed' %}
+            <span class="flex items-center gap-1.5 text-xs text-red-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span> Failed
+            </span>
+          {% elif project.status == 'creating' %}
+            <span class="flex items-center gap-1.5 text-xs text-yellow-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-yellow-400 status-pulse"></span> Creating
+            </span>
+          {% else %}
+            <span class="flex items-center gap-1.5 text-xs text-surface-400 font-medium">
+              <span class="w-2 h-2 rounded-full bg-surface-400"></span> {{ project.get_status_display }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Project name + domain -->
+        <div class="mb-4 pr-20">
+          <a href="{% url 'projects:detail' project.slug %}"
+             class="text-base font-semibold text-gray-100 hover:text-brand-400 transition-colors">
+            {{ project.name }}
+          </a>
+          {% if project.domain %}
+          <p class="text-xs text-surface-400 mt-0.5 font-mono">{{ project.domain }}</p>
+          {% endif %}
+        </div>
+
+        <!-- Git branch + Python version -->
+        <div class="flex items-center gap-3 mb-4">
+          <span class="flex items-center gap-1 text-xs text-surface-400 bg-surface-700 px-2 py-1 rounded-md">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><path d="M11.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122V6A2.5 2.5 0 0110 8.5H6a1 1 0 00-1 1v1.128a2.251 2.251 0 11-1.5 0V5.372a2.25 2.25 0 111.5 0v1.836A2.492 2.492 0 016 7h4a1 1 0 001-1v-.628A2.25 2.25 0 019.5 3.25z"/></svg>
+            {{ project.git_branch }}
+          </span>
+          <span class="text-xs text-surface-400 bg-surface-700 px-2 py-1 rounded-md">Python {{ project.python_version }}</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-2 pt-3 border-t border-surface-700">
+          <a href="{% url 'projects:detail' project.slug %}"
+             class="flex-1 text-center text-xs font-medium text-gray-300 hover:text-brand-400 py-1.5 rounded-lg hover:bg-surface-700 transition-colors">
+            Details
+          </a>
+
+          {% if project.status == 'active' %}
+          <form method="post" action="{% url 'services:control' project.slug 'restart' %}">{% csrf_token %}
+            <button type="submit"
+                    hx-post="{% url 'services:control' project.slug 'restart' %}"
+                    hx-target="#project-status-{{ project.slug }}"
+                    class="text-xs font-medium text-yellow-400 hover:text-yellow-300 px-2 py-1.5 rounded-lg hover:bg-yellow-900/20 transition-colors">
+              ↺ Restart
+            </button>
+          </form>
+          <form method="post" action="{% url 'services:control' project.slug 'stop' %}">{% csrf_token %}
+            <button type="submit"
+                    class="text-xs font-medium text-red-400 hover:text-red-300 px-2 py-1.5 rounded-lg hover:bg-red-900/20 transition-colors">
+              ■ Stop
+            </button>
+          </form>
+          {% else %}
+          <form method="post" action="{% url 'services:control' project.slug 'start' %}">{% csrf_token %}
+            <button type="submit"
+                    class="text-xs font-medium text-green-400 hover:text-green-300 px-2 py-1.5 rounded-lg hover:bg-green-900/20 transition-colors">
+              ▶ Start
+            </button>
+          </form>
+          {% endif %}
+
+          <form method="post" action="{% url 'deployments:trigger' project.slug %}">{% csrf_token %}
+            <button type="submit"
+                    class="text-xs font-medium text-brand-400 hover:text-brand-300 px-2 py-1.5 rounded-lg hover:bg-brand-900/20 transition-colors">
+              ↑ Deploy
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="flex flex-col items-center justify-center py-20 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-surface-700 flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-200 mb-2">No projects yet</h3>
+      <p class="text-sm text-surface-400 mb-6 max-w-sm">Create your first managed Django project to get started.</p>
+      <a href="{% url 'projects:create' %}"
+         class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg transition-colors">
+        Create First Project
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
