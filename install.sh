@@ -64,9 +64,13 @@ sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
 ########################################
 # 3. GIT CLONE (OWNED BY APP USER)
 ########################################
-echo "📥 Cloning repo..."
+echo "📥 Cloning/Updating Git repo..."
 
 if [ -d "${APP_DIR}/.git" ]; then
+    sudo -u "${APP_USER}" git -C "${APP_DIR}" reset --hard
+    sudo -u "${APP_USER}" git -C "${APP_DIR}" clean -fd
+    sudo -u "${APP_USER}" git -C "${APP_DIR}" fetch origin
+    sudo -u "${APP_USER}" git -C "${APP_DIR}" checkout "${BRANCH}"
     sudo -u "${APP_USER}" git -C "${APP_DIR}" pull origin "${BRANCH}"
 else
     sudo -u "${APP_USER}" git clone \
