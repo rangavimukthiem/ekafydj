@@ -21,7 +21,7 @@ echo "🛑 Stopping service..."
 sudo systemctl stop ekafy || true
 
 echo "🧹 Cleaning old installation..."
-sudo rm -rf "$APP_DIR
+sudo rm -rf "$APP_DIR"
 
 PYTHON_BIN="python3"
 VENV_DIR="${APP_DIR}/.venv"
