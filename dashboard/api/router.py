@@ -18,7 +18,4 @@ router.register(r"deployments", DeploymentViewSet, basename="deployment")
 router.register(r"backups", BackupViewSet, basename="backup")
 router.register(r"metrics", SystemMetricViewSet, basename="metric")
 
-urlpatterns = [
-    path("", include(router.urls)),
-    path("auth/", include("rest_framework.urls", namespace="rest_framework")),
-]
+
