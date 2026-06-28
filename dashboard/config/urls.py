@@ -7,7 +7,7 @@ from api.router import router
 urlpatterns = [
     path("django-admin/", admin.site.urls),
 
-    path("account/", include("two_factor.urls")),
+    path("account/", include(("two_factor.urls", "two_factor"), namespace="two_factor")),
 
     path("", include("apps.projects.urls")),
 
