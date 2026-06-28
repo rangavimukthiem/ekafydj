@@ -12,6 +12,8 @@ urlpatterns = [
 
     # Two-Factor Auth
     path("account/", include("two_factor.urls")),
+,
+	
 
     # Dashboard (main app root)
     path("", include("apps.projects.urls")),
