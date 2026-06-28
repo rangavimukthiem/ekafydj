@@ -11,21 +11,23 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
 
     # Two-Factor Auth
-    path("account/", include("two_factor.urls", namespace="two_factor")),
+    path("account/", include("two_factor.urls")),
+	
 
     # Dashboard (main app)
-    path("", include("apps.projects.urls", namespace="dashboard")),
-    path("projects/", include("apps.projects.urls", namespace="projects")),
-    path("deployments/", include("apps.deployments.urls", namespace="deployments")),
-    path("services/", include("apps.services.urls", namespace="services")),
-    path("logs/", include("apps.logs.urls", namespace="logs")),
-    path("backups/", include("apps.backups.urls", namespace="backups")),
-    path("monitoring/", include("apps.monitoring.urls", namespace="monitoring")),
-    path("users/", include("apps.users.urls", namespace="users")),
-    path("audit/", include("apps.audit.urls", namespace="audit")),
+    path("", include("apps.projects.urls")),
+
+    path("projects/", include("apps.projects.urls")),
+    path("deployments/", include("apps.deployments.urls")),
+    path("services/", include("apps.services.urls")),
+    path("logs/", include("apps.logs.urls")),
+    path("backups/", include("apps.backups.urls")),
+    path("monitoring/", include("apps.monitoring.urls")),
+    path("users/", include("apps.users.urls")),
+    path("audit/", include("apps.audit.urls")),
 
     # REST API
-    path("api/v1/", include("api.router", namespace="api")),
+    path("api/v1/", include("api.router")),
 ]
 
 if settings.DEBUG:

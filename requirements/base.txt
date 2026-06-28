@@ -24,3 +24,5 @@ crispy-tailwind==1.0.3
 django-two-factor-auth==1.16.0
 qrcode==7.4.2
 boto3==1.35.80
+phonenumbers==9.0.33
+
