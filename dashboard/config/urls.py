@@ -1,6 +1,3 @@
-"""
-EKAFY — Root URL Configuration
-"""
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
@@ -8,17 +5,12 @@ from django.urls import path, include
 from api.router import router  
 
 urlpatterns = [
-    # Admin
     path("django-admin/", admin.site.urls),
 
-    # Two-Factor Auth
     path("account/", include("two_factor.urls")),
-	
 
-    # Dashboard (main app root)
     path("", include("apps.projects.urls")),
 
-    # Modules (clean separated routing)
     path("deployments/", include("apps.deployments.urls")),
     path("services/", include("apps.services.urls")),
     path("logs/", include("apps.logs.urls")),
@@ -27,10 +19,10 @@ urlpatterns = [
     path("users/", include("apps.users.urls")),
     path("audit/", include("apps.audit.urls")),
 
-    # REST API
-    # path("api/v1/", include("api.router")),
-	path("api/v1/", router.urls),
+    # ✅ FIXED LINE
+    path("api/v1/", include(router.urls)),
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
