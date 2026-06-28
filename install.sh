@@ -7,6 +7,7 @@ set -euo pipefail
 
 cd /tmp
 
+
 # ---------- CONFIG ----------
 APP_NAME="ekafydj"
 APP_USER="ekafy"
@@ -14,7 +15,13 @@ APP_GROUP="www-data"
 
 APP_DIR="/srv/${APP_NAME}"
 REPO_URL="https://github.com/rangavimukthiem/ekafydj.git"
+
 BRANCH="main"
+echo "🛑 Stopping service..."
+sudo systemctl stop ekafy || true
+
+echo "🧹 Cleaning old installation..."
+sudo rm -rf "$APP_DIR
 
 PYTHON_BIN="python3"
 VENV_DIR="${APP_DIR}/.venv"
