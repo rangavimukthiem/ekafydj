@@ -44,6 +44,7 @@ class DeploymentListView(ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["status_choices"] = Deployment.Status.choices
         ctx["projects"] = Project.objects.order_by("name")
+        ctx["page_title"] = "Deployments"
         return ctx
 
 
@@ -56,7 +57,10 @@ class DeploymentDetailView(View):
             Deployment.objects.select_related("project", "triggered_by"),
             pk=pk,
         )
-        return render(request, self.template_name, {"deployment": deployment})
+        return render(request, self.template_name, {
+            "deployment": deployment,
+            "page_title": f"Deployments / {deployment.project.name}",
+        })
 
 
 @method_decorator(login_required, name="dispatch")

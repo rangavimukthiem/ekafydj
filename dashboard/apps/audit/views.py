@@ -38,4 +38,5 @@ class AuditLogListView(LoginRequiredMixin, ListView):
         ctx["users"] = User.objects.filter(is_active=True).order_by("username")
         ctx["action_filter"] = self.request.GET.get("action", "")
         ctx["resource_filter"] = self.request.GET.get("resource_type", "")
+        ctx["page_title"] = "Audit Log"
         return ctx

@@ -28,6 +28,7 @@ class MonitoringDashboardView(View):
         return render(request, self.template_name, {
             "metric": metric,
             "projects": projects,
+            "page_title": "System Monitoring",
         })
 
 

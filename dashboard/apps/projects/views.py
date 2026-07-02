@@ -35,6 +35,7 @@ class DashboardIndexView(View):
             "active_count": projects.filter(status=Project.Status.ACTIVE).count(),
             "total_count": projects.count(),
             "failed_count": projects.filter(status=Project.Status.FAILED).count(),
+            "page_title": "Overview",
         })
 
 
@@ -60,6 +61,7 @@ class ProjectListView(ListView):
         ctx["status_choices"] = Project.Status.choices
         ctx["q"] = self.request.GET.get("q", "")
         ctx["status_filter"] = self.request.GET.get("status", "")
+        ctx["page_title"] = "Projects"
         return ctx
 
 
@@ -84,6 +86,7 @@ class ProjectDetailView(DetailView):
         ctx["recent_backups"] = Backup.objects.filter(
             project=self.object
         ).order_by("-created_at")[:5]
+        ctx["page_title"] = f"Projects / {self.object.name}"
         return ctx
 
 
@@ -93,7 +96,7 @@ class ProjectCreateView(OperatorRequiredMixin, View):
 
     def get(self, request):
         form = ProjectCreateForm()
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "page_title": "Projects / New Project"})
 
     def post(self, request):
         form = ProjectCreateForm(request.POST)
@@ -108,7 +111,7 @@ class ProjectCreateView(OperatorRequiredMixin, View):
             except ProjectError as exc:
                 messages.error(request, f"Project creation failed: {exc}")
 
-        return render(request, self.template_name, {"form": form})
+        return render(request, self.template_name, {"form": form, "page_title": "Projects / New Project"})
 
 
 @method_decorator(login_required, name="dispatch")
@@ -118,7 +121,7 @@ class ProjectUpdateView(OperatorRequiredMixin, View):
     def get(self, request, slug):
         project = get_object_or_404(Project, slug=slug)
         form = ProjectUpdateForm(instance=project)
-        return render(request, self.template_name, {"form": form, "project": project})
+        return render(request, self.template_name, {"form": form, "project": project, "page_title": f"Projects / {project.name}"})
 
     def post(self, request, slug):
         project = get_object_or_404(Project, slug=slug)
@@ -130,7 +133,7 @@ class ProjectUpdateView(OperatorRequiredMixin, View):
             })
             messages.success(request, f"Project '{project.name}' updated.")
             return redirect("projects:detail", slug=project.slug)
-        return render(request, self.template_name, {"form": form, "project": project})
+        return render(request, self.template_name, {"form": form, "project": project, "page_title": f"Projects / {project.name}"})
 
 
 @method_decorator(login_required, name="dispatch")

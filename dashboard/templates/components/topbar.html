@@ -3,7 +3,7 @@
   <div class="flex items-center gap-4">
     <!-- Page breadcrumb -->
     <h1 class="text-sm font-medium text-gray-300">
-      {% block page_title %}Dashboard{% endblock %}
+      {{ page_title|default:"Dashboard" }}
     </h1>
   </div>
 
