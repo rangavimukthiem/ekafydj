@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.views import LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
@@ -8,7 +9,7 @@ from two_factor.urls import urlpatterns as two_factor_urlpatterns
 urlpatterns = [
     path("django-admin/", admin.site.urls),
 
-    
+    path("account/logout/", LogoutView.as_view(), name="logout"),
     path("", include(two_factor_urlpatterns)),
 
     path("", include("apps.projects.urls")),
