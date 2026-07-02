@@ -124,8 +124,8 @@ fi
 ########################################
 echo "🐘 Setting up database..."
 
-DB_PASS=$(openssl rand -base64 32)
-SECRET_KEY=$(openssl rand -base64 48)
+DB_PASS=$(openssl rand -hex 24)
+SECRET_KEY=$(openssl rand -hex 48)
 
 sudo -u postgres psql -tc \
 "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
