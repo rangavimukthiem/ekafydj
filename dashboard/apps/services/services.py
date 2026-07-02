@@ -3,7 +3,6 @@ apps.services — Systemd Service Control
 Wraps systemctl commands for start/stop/restart/status of managed projects.
 """
 import logging
-import re
 import subprocess
 
 from apps.audit.services import AuditService
@@ -14,6 +13,8 @@ from apps.projects.repositories import ProjectRepository
 logger = logging.getLogger(__name__)
 
 SYSTEMCTL = "/usr/bin/systemctl"
+JOURNALCTL = "/usr/bin/journalctl"
+SUDO = "/usr/bin/sudo"
 
 
 class SystemdService:
@@ -32,7 +33,7 @@ class SystemdService:
         """Return systemd service status as a structured dict."""
         try:
             result = subprocess.run(
-                ["sudo", SYSTEMCTL, "status", project.systemd_service, "--no-pager"],
+                [SUDO, "-n", SYSTEMCTL, "status", project.systemd_service, "--no-pager"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -70,7 +71,7 @@ class SystemdService:
 
         try:
             result = subprocess.run(
-                ["sudo", SYSTEMCTL, action, project.systemd_service],
+                [SUDO, "-n", SYSTEMCTL, action, project.systemd_service],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -108,7 +109,7 @@ class SystemdService:
         """Get recent journal log lines for a service."""
         try:
             result = subprocess.run(
-                ["sudo", "journalctl", "-u", project.systemd_service,
+                [SUDO, "-n", JOURNALCTL, "-u", project.systemd_service,
                  f"-n{lines}", "--no-pager", "--output=short-iso"],
                 capture_output=True,
                 text=True,

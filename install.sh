@@ -30,6 +30,7 @@ DB_NAME="${APP_NAME}_db"
 DB_USER="${APP_NAME}_user"
 
 ENV_FILE="${APP_DIR}/dashboard/.env"
+SUDOERS_FILE="/etc/sudoers.d/${APP_NAME}"
 
 export DEBIAN_FRONTEND=noninteractive
 export HOME="${APP_DIR}"
@@ -67,6 +68,30 @@ fi
 
 sudo mkdir -p "${APP_DIR}"
 sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
+
+echo "🔐 Configuring EKAFY sudo permissions..."
+sudo tee "${SUDOERS_FILE}" > /dev/null <<EOF
+# Managed by EKAFY installer.
+# Allows the dashboard service user to manage only EKAFY project services
+# and run EKAFY's own privileged provisioning scripts without a TTY.
+Defaults:${APP_USER} !requiretty
+Cmnd_Alias EKAFY_PROJECT_SCRIPTS = \
+    /usr/bin/bash ${APP_DIR}/dashboard/scripts/create_project.sh *, \
+    /usr/bin/bash ${APP_DIR}/dashboard/scripts/create_systemd_service.sh *, \
+    /usr/bin/bash ${APP_DIR}/dashboard/scripts/create_nginx_conf.sh *
+Cmnd_Alias EKAFY_PROJECT_SYSTEMCTL = \
+    /usr/bin/systemctl start ekafy-*.service, \
+    /usr/bin/systemctl stop ekafy-*.service, \
+    /usr/bin/systemctl restart ekafy-*.service, \
+    /usr/bin/systemctl reload ekafy-*.service, \
+    /usr/bin/systemctl status ekafy-*.service --no-pager
+Cmnd_Alias EKAFY_PROJECT_JOURNAL = \
+    /usr/bin/journalctl -u ekafy-*.service *, \
+    /usr/bin/journalctl -f -u ekafy-*.service *
+${APP_USER} ALL=(root) NOPASSWD: EKAFY_PROJECT_SCRIPTS, EKAFY_PROJECT_SYSTEMCTL, EKAFY_PROJECT_JOURNAL
+EOF
+sudo chmod 440 "${SUDOERS_FILE}"
+sudo visudo -cf "${SUDOERS_FILE}"
 
 ########################################
 # 3. GIT CLONE (OWNED BY APP USER)

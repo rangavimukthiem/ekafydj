@@ -9,7 +9,7 @@ from django.conf import settings
 
 from apps.audit.services import AuditService
 from apps.core.exceptions import DeploymentInProgressError, DeploymentError, ScriptExecutionError
-from apps.core.utils import run_command, run_script
+from apps.core.utils import run_command
 from apps.projects.models import Project
 from apps.projects.repositories import ProjectRepository
 
@@ -158,7 +158,7 @@ class DeploymentService:
 
             # Step 5: restart service
             log(f"--- Step 5/6: systemctl restart {project.systemd_service} ---")
-            result = run_command(["sudo", "systemctl", "restart", project.systemd_service], timeout=30)
+            result = run_command(["sudo", "-n", "/usr/bin/systemctl", "restart", project.systemd_service], timeout=30)
             log(result.stdout or "Service restarted")
 
             # Step 6: update project status

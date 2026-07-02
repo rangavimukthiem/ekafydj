@@ -36,7 +36,7 @@ class TestProjectRepository:
 @pytest.mark.django_db
 class TestProjectService:
 
-    @patch("apps.projects.services.run_script")
+    @patch("apps.projects.services.run_privileged_script")
     def test_create_project_success(self, mock_script, admin_user):
         mock_script.return_value = MagicMock(returncode=0, stdout="")
 
@@ -52,7 +52,7 @@ class TestProjectService:
         assert project.db_password  # auto-generated
         assert project.secret_key   # auto-generated
 
-    @patch("apps.projects.services.run_script")
+    @patch("apps.projects.services.run_privileged_script")
     def test_create_project_duplicate_raises(self, mock_script, admin_user, project):
         svc = ProjectService(acting_user=admin_user)
         with pytest.raises(ProjectAlreadyExistsError):
@@ -61,7 +61,7 @@ class TestProjectService:
                 git_url="git@github.com:user/other.git",
             )
 
-    @patch("apps.projects.services.run_script")
+    @patch("apps.projects.services.run_privileged_script")
     def test_archive_project(self, mock_script, admin_user, project):
         project.status = Project.Status.STOPPED
         project.save()

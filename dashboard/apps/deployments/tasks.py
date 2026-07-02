@@ -59,7 +59,7 @@ def run_rollback(self, *, deployment_id: str, target_commit: str) -> dict:
                      f"--settings={project.django_settings_module}"], timeout=120)
         log("migrate complete")
 
-        run_command(["sudo", "systemctl", "restart", project.systemd_service], timeout=30)
+        run_command(["sudo", "-n", "/usr/bin/systemctl", "restart", project.systemd_service], timeout=30)
         log("Service restarted")
 
         repo.update(deployment, status=Deployment.Status.ROLLED_BACK,

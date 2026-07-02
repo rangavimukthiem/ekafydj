@@ -38,7 +38,7 @@ class LogService:
             Log content as a string.
         """
         cmd = [
-            "sudo", "journalctl",
+            "sudo", "-n", "/usr/bin/journalctl",
             "-u", service_name,
             f"-n", str(lines),
             "--no-pager",
@@ -97,7 +97,7 @@ class LogService:
         """
         try:
             process = subprocess.Popen(
-                ["sudo", "journalctl", "-f", "-u", service_name, "--no-pager", "--output=short-iso"],
+                ["sudo", "-n", "/usr/bin/journalctl", "-f", "-u", service_name, "--no-pager", "--output=short-iso"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,

@@ -101,6 +101,24 @@ def run_script(script_name: str, args: list[str] | None = None) -> subprocess.Co
     return run_command(cmd)
 
 
+def run_privileged_script(script_name: str, args: list[str] | None = None) -> subprocess.CompletedProcess:
+    """
+    Run an EKAFY script through non-interactive sudo.
+
+    Production installs grant the ekafy user passwordless sudo for these scripts
+    through /etc/sudoers.d/ekafydj. The -n flag makes missing sudoers rules fail
+    cleanly instead of blocking on a password prompt.
+    """
+    scripts_dir = Path(settings.EKAFY_SCRIPTS_DIR)
+    script_path = scripts_dir / script_name
+
+    if not script_path.exists():
+        raise ScriptExecutionError(f"Script not found: {script_path}")
+
+    cmd = ["sudo", "-n", "/usr/bin/bash", str(script_path)] + (args or [])
+    return run_command(cmd)
+
+
 def slugify(text: str) -> str:
     """Convert a string to a URL and filesystem-safe slug."""
     text = text.lower().strip()

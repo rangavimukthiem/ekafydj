@@ -9,7 +9,7 @@ from django.conf import settings
 
 from apps.audit.services import AuditService
 from apps.core.exceptions import ProjectAlreadyExistsError, ProjectNotFoundError, ScriptExecutionError
-from apps.core.utils import run_script, get_project_dir, ensure_dirs, slugify
+from apps.core.utils import run_privileged_script, slugify
 
 from .models import Project
 from .repositories import ProjectRepository
@@ -146,7 +146,7 @@ class ProjectService:
 
     def _scaffold_filesystem(self, project: Project) -> None:
         """Call create_project.sh to create directories, venv, and DB."""
-        run_script(
+        run_privileged_script(
             "create_project.sh",
             args=[
                 project.slug,
@@ -162,7 +162,7 @@ class ProjectService:
 
     def _create_systemd_service(self, project: Project) -> None:
         """Generate and install the systemd service unit for the project."""
-        run_script(
+        run_privileged_script(
             "create_systemd_service.sh",
             args=[
                 project.slug,
@@ -180,7 +180,7 @@ class ProjectService:
         """Generate and install the nginx server block for the project."""
         if not project.domain:
             return
-        run_script(
+        run_privileged_script(
             "create_nginx_conf.sh",
             args=[
                 project.slug,
