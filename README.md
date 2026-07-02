@@ -303,13 +303,19 @@ Authentication is handled by Django session auth or JWT, depending on the endpoi
 Check whether the app is reachable through Gunicorn:
 
 ```bash
-curl -I http://127.0.0.1:8000/account/login/
+curl -fsS -o /tmp/ekafydj-login-gunicorn.html http://127.0.0.1:8000/account/login/?next=/
 ```
 
 Check whether it is reachable through Nginx:
 
 ```bash
-curl -I http://127.0.0.1/account/login/
+curl -fsS -o /tmp/ekafydj-login-nginx.html http://127.0.0.1/account/login/?next=/
+```
+
+To test the public IP host header through local Nginx:
+
+```bash
+APP_PUBLIC_HOST=45.130.164.233 sudo -E bash /srv/ekafydj/dashboard/scripts/verify_install.sh
 ```
 
 If Nginx warns about duplicate `server_name _`, list enabled sites:

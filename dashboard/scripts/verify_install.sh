@@ -7,6 +7,7 @@ APP_DIR="${APP_DIR:-/srv/${APP_NAME}}"
 DASHBOARD_DIR="${APP_DIR}/dashboard"
 VENV_DIR="${APP_DIR}/.venv"
 ENV_FILE="${DASHBOARD_DIR}/.env"
+VERIFY_SINCE="$(date '+%Y-%m-%d %H:%M:%S')"
 FIX_MODE=0
 FAILURES=0
 
@@ -134,20 +135,27 @@ run_check "nginx service is active" systemctl is-active --quiet nginx
 run_check "ekafydj nginx site is enabled" test -L "/etc/nginx/sites-enabled/${APP_NAME}"
 
 section "9. HTTP checks"
-run_check "Gunicorn login endpoint responds" curl -fsSI "http://127.0.0.1:8000/account/login/"
-run_check "Nginx login endpoint responds" curl -fsSI "http://127.0.0.1/account/login/"
+run_check "Gunicorn login page renders with GET" \
+    curl -fsS -o /tmp/ekafydj-login-gunicorn.html "http://127.0.0.1:8000/account/login/?next=/"
+run_check "Nginx login page renders with GET" \
+    curl -fsS -o /tmp/ekafydj-login-nginx.html "http://127.0.0.1/account/login/?next=/"
 
-section "10. Recent service errors"
-if sudo journalctl -u "${APP_NAME}-dashboard" -n 80 --no-pager -p err | grep -q .; then
-    warn "recent dashboard errors exist; inspect with: sudo journalctl -u ${APP_NAME}-dashboard -n 120 --no-pager -l"
-else
-    ok "no recent dashboard errors at journal priority err"
+if [ -n "${APP_PUBLIC_HOST:-}" ]; then
+    run_check "Nginx login page renders with Host ${APP_PUBLIC_HOST}" \
+        curl -fsS -H "Host: ${APP_PUBLIC_HOST}" -o /tmp/ekafydj-login-public-host.html "http://127.0.0.1/account/login/?next=/"
 fi
 
-if sudo journalctl -u "${APP_NAME}-celery" -n 80 --no-pager -p err | grep -q .; then
-    warn "recent celery errors exist; inspect with: sudo journalctl -u ${APP_NAME}-celery -n 120 --no-pager -l"
+section "10. Fresh service errors"
+if sudo journalctl -u "${APP_NAME}-dashboard" --since "$VERIFY_SINCE" --no-pager -p err | grep -q .; then
+    fail "fresh dashboard errors exist; inspect with: sudo journalctl -u ${APP_NAME}-dashboard --since '${VERIFY_SINCE}' --no-pager -l"
 else
-    ok "no recent celery errors at journal priority err"
+    ok "no fresh dashboard errors at journal priority err"
+fi
+
+if sudo journalctl -u "${APP_NAME}-celery" --since "$VERIFY_SINCE" --no-pager -p err | grep -q .; then
+    fail "fresh celery errors exist; inspect with: sudo journalctl -u ${APP_NAME}-celery --since '${VERIFY_SINCE}' --no-pager -l"
+else
+    ok "no fresh celery errors at journal priority err"
 fi
 
 section "Result"
