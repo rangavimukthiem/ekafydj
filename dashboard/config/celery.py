@@ -3,7 +3,7 @@ EKAFY — Celery Application
 """
 import os
 from celery import Celery
-from celery.schedules import crontab
+from celery.schedules import crontab  # type: ignore[import]
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.production")
 
