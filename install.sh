@@ -17,6 +17,33 @@ APP_DIR="/srv/${APP_NAME}"
 REPO_URL="https://github.com/rangavimukthiem/ekafydj.git"
 
 BRANCH="main"
+
+PLATFORM_DOMAIN="${EKAFY_PLATFORM_DOMAIN:-}"
+if [ -z "${PLATFORM_DOMAIN}" ] && [ -t 0 ]; then
+    read -rp "Platform domain for EKAFY, e.g. ekafy.com (leave blank for IP-only HTTP): " PLATFORM_DOMAIN
+fi
+PLATFORM_DOMAIN="$(printf '%s' "${PLATFORM_DOMAIN}" | tr '[:upper:]' '[:lower:]' | sed -E 's#^https?://##; s#/.*$##; s/^www\.//; s/[[:space:]]//g')"
+
+if [ -n "${PLATFORM_DOMAIN}" ] && ! [[ "${PLATFORM_DOMAIN}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]; then
+    echo "Invalid domain: ${PLATFORM_DOMAIN}"
+    echo "Use a bare domain such as ekafy.com, not a URL."
+    exit 1
+fi
+
+PLATFORM_WWW_DOMAIN=""
+NGINX_SERVER_NAMES="_"
+PUBLIC_URL="http://SERVER_IP"
+CSRF_TRUSTED_ORIGINS_VALUE=""
+SECURE_SSL_REDIRECT_VALUE="False"
+SESSION_COOKIE_SECURE_VALUE="False"
+CSRF_COOKIE_SECURE_VALUE="False"
+
+if [ -n "${PLATFORM_DOMAIN}" ]; then
+    PLATFORM_WWW_DOMAIN="www.${PLATFORM_DOMAIN}"
+    NGINX_SERVER_NAMES="${PLATFORM_DOMAIN} ${PLATFORM_WWW_DOMAIN}"
+    PUBLIC_URL="http://${PLATFORM_DOMAIN}"
+    CSRF_TRUSTED_ORIGINS_VALUE="https://${PLATFORM_DOMAIN},https://${PLATFORM_WWW_DOMAIN}"
+fi
 echo "🛑 Stopping service..."
 sudo systemctl stop "${APP_NAME}-dashboard" || true
 
@@ -50,7 +77,8 @@ sudo apt install -y \
     git curl nginx redis-server \
     postgresql postgresql-contrib \
     ${PYTHON_BIN} ${PYTHON_BIN}-venv ${PYTHON_BIN}-dev \
-    build-essential libpq-dev openssl
+    build-essential libpq-dev openssl \
+    certbot python3-certbot-nginx
 
 sudo systemctl enable --now nginx redis-server postgresql
 
@@ -180,6 +208,7 @@ sudo tee "${ENV_FILE}" > /dev/null <<EOF
 SECRET_KEY=${SECRET_KEY}
 DEBUG=False
 ALLOWED_HOSTS=*
+CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS_VALUE}
 DJANGO_SETTINGS_MODULE=config.settings.production
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
@@ -196,10 +225,11 @@ EKAFY_LOGS_DIR=${APP_DIR}/logs
 EKAFY_BACKUPS_DIR=${APP_DIR}/backups
 EKAFY_DEPLOYMENTS_DIR=${APP_DIR}/deployments
 EKAFY_SCRIPTS_DIR=${APP_DIR}/dashboard/scripts
+EKAFY_PLATFORM_DOMAIN=${PLATFORM_DOMAIN}
 USE_S3_BACKUPS=False
-SECURE_SSL_REDIRECT=False
-SESSION_COOKIE_SECURE=False
-CSRF_COOKIE_SECURE=False
+SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT_VALUE}
+SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE_VALUE}
+CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE_VALUE}
 EOF
 sudo sed -i 's/\r$//' "${ENV_FILE}"
 sudo chown "${APP_USER}:${APP_GROUP}" "${ENV_FILE}"
@@ -302,10 +332,12 @@ sudo systemctl enable --now ${APP_NAME}-celery-beat
 ########################################
 echo "🌐 Configuring Nginx..."
 
+sudo rm -f /etc/nginx/sites-enabled/default
+
 sudo tee /etc/nginx/sites-available/${APP_NAME} > /dev/null <<EOF
 server {
-    listen 80;
-    server_name _;
+    listen 80 default_server;
+    server_name ${NGINX_SERVER_NAMES};
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -329,6 +361,36 @@ sudo ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/${AP
 
 sudo nginx -t && sudo systemctl reload nginx
 
+if [ -n "${PLATFORM_DOMAIN}" ]; then
+    echo "Requesting Let's Encrypt certificate for ${PLATFORM_DOMAIN} and ${PLATFORM_WWW_DOMAIN}..."
+    echo "Make sure both DNS records already point to this server before running the installer."
+
+    if sudo certbot --nginx \
+        -d "${PLATFORM_DOMAIN}" \
+        -d "${PLATFORM_WWW_DOMAIN}" \
+        --non-interactive \
+        --agree-tos \
+        --redirect \
+        --register-unsafely-without-email; then
+        sudo sed -i \
+            -e 's/^SECURE_SSL_REDIRECT=.*/SECURE_SSL_REDIRECT=True/' \
+            -e 's/^SESSION_COOKIE_SECURE=.*/SESSION_COOKIE_SECURE=True/' \
+            -e 's/^CSRF_COOKIE_SECURE=.*/CSRF_COOKIE_SECURE=True/' \
+            "${ENV_FILE}"
+        sudo systemctl restart "${APP_NAME}-dashboard"
+        sudo nginx -t && sudo systemctl reload nginx
+        PUBLIC_URL="https://${PLATFORM_DOMAIN}"
+        echo "SSL enabled: https://${PLATFORM_DOMAIN}"
+    else
+        echo "WARNING: Certbot could not issue a certificate."
+        echo "The dashboard remains available over HTTP. Check DNS for ${PLATFORM_DOMAIN} and ${PLATFORM_WWW_DOMAIN}, then rerun certbot."
+    fi
+fi
+
+if [ -n "${PLATFORM_DOMAIN}" ]; then
+    export APP_PUBLIC_HOST="${PLATFORM_DOMAIN}"
+fi
+
 ########################################
 # 12. POST-INSTALL VERIFICATION
 ########################################
@@ -342,7 +404,7 @@ sudo bash "${APP_DIR}/dashboard/scripts/verify_install.sh"
 echo "======================================"
 echo "🔥 INSTALLER v3.1 COMPLETE"
 echo "======================================"
-echo "URL: http://SERVER_IP"
+echo "URL: ${PUBLIC_URL}"
 echo "APP: ${APP_DIR}"
 echo "VENV: ${VENV_DIR}"
 echo "DB: ${DB_NAME}"
