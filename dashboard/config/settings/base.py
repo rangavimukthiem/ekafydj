@@ -254,7 +254,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "/srv/ekafy/logs/ekafy_dashboard.log",
+            "filename": f"{EKAFY_LOGS_DIR}/ekafy_dashboard.log",
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
             "backupCount": 5,
             "formatter": "verbose",
