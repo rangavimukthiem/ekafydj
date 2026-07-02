@@ -124,7 +124,9 @@ fi
 ########################################
 echo "🐘 Setting up database..."
 
-DB_PASS=$(openssl rand -hex 24)
+# DB_PASS=$(openssl rand -hex 24)
+# SECRET_KEY=$(openssl rand -hex 48)
+DB_PASS=$(openssl rand -hex 32)
 SECRET_KEY=$(openssl rand -hex 48)
 
 sudo -u postgres psql -tc \
