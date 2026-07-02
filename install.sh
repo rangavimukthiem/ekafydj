@@ -181,9 +181,21 @@ echo "🧱 Running Django setup..."
 
 cd "${APP_DIR}/dashboard"
 
-sudo -u "${APP_USER}" env DJANGO_SETTINGS_MODULE=config.settings.production "${VENV_DIR}/bin/python" manage.py migrate
+DJANGO_ENV=(
+    DJANGO_SETTINGS_MODULE=config.settings.production
+    DB_NAME="${DB_NAME}"
+    DB_USER="${DB_USER}"
+    DB_PASSWORD="${DB_PASS}"
+    DB_HOST=localhost
+    DB_PORT=5432
+)
 
-sudo -u "${APP_USER}" env DJANGO_SETTINGS_MODULE=config.settings.production "${VENV_DIR}/bin/python" manage.py collectstatic --noinput || true
+sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py shell -c \
+    "from django.db import connection; connection.ensure_connection(); print('Django DB OK')"
+
+sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py migrate
+
+sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py collectstatic --noinput || true
 
 ########################################
 # 9. SYSTEMD SERVICES
