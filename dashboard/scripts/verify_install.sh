@@ -116,8 +116,21 @@ run_check "Django can reverse login/logout URLs" \
     sudo -u "$APP_USER" env DJANGO_SETTINGS_MODULE=config.settings.production DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" \
     "${VENV_DIR}/bin/python" manage.py shell -c "from django.urls import reverse; print(reverse('logout')); print(reverse('two_factor:login'))"
 
+if [ "$FIX_MODE" -eq 1 ]; then
+    run_check "collect static assets" \
+        sudo -u "$APP_USER" env DJANGO_SETTINGS_MODULE=config.settings.production DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" \
+        "${VENV_DIR}/bin/python" manage.py collectstatic --noinput
+fi
+
 run_check "staticfiles directory exists" test -d "${DASHBOARD_DIR}/staticfiles"
 run_check "staticfiles directory is not empty" bash -c "find '${DASHBOARD_DIR}/staticfiles' -type f | head -n 1 | grep -q ."
+run_check "Django admin base.css exists" test -f "${DASHBOARD_DIR}/staticfiles/admin/css/base.css"
+
+if [ "$FIX_MODE" -eq 1 ]; then
+    run_check "staticfiles ownership is readable by nginx" sudo chown -R "${APP_USER}:www-data" "${DASHBOARD_DIR}/staticfiles"
+    run_check "staticfiles directories are executable" sudo find "${DASHBOARD_DIR}/staticfiles" -type d -exec chmod 755 {} +
+    run_check "staticfiles files are readable" sudo find "${DASHBOARD_DIR}/staticfiles" -type f -exec chmod 644 {} +
+fi
 
 section "6. Celery Beat task names"
 run_check "Celery Beat task names are registered names" \
@@ -148,6 +161,8 @@ run_check "Gunicorn login page renders with GET" \
     curl -fsS -o /tmp/ekafydj-login-gunicorn.html "http://127.0.0.1:8000/account/login/?next=/"
 run_check "Nginx login page renders with GET" \
     curl -fsS -o /tmp/ekafydj-login-nginx.html "http://127.0.0.1/account/login/?next=/"
+run_check "Nginx serves Django admin CSS" \
+    bash -c "curl -fsSI http://127.0.0.1/static/admin/css/base.css | grep -qi '^content-type: text/css'"
 run_check "Authenticated dashboard renders with Django test client" \
     sudo -u "$APP_USER" env DJANGO_SETTINGS_MODULE=config.settings.production DB_NAME="$DB_NAME" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" DB_HOST="$DB_HOST" DB_PORT="$DB_PORT" \
     "${VENV_DIR}/bin/python" manage.py shell -c "from django.contrib.auth import get_user_model; from django.test import Client; User=get_user_model(); user=User.objects.filter(is_superuser=True).first(); assert user, 'create a superuser before authenticated dashboard verification'; client=Client(); client.force_login(user); response=client.get('/'); print(response.status_code); raise SystemExit(0 if response.status_code == 200 else 1)"
@@ -155,6 +170,8 @@ run_check "Authenticated dashboard renders with Django test client" \
 if [ -n "${APP_PUBLIC_HOST:-}" ]; then
     run_check "Nginx login page renders with Host ${APP_PUBLIC_HOST}" \
         curl -fsS -H "Host: ${APP_PUBLIC_HOST}" -o /tmp/ekafydj-login-public-host.html "http://127.0.0.1/account/login/?next=/"
+    run_check "Nginx serves Django admin CSS with Host ${APP_PUBLIC_HOST}" \
+        bash -c "curl -fsSI -H 'Host: ${APP_PUBLIC_HOST}' http://127.0.0.1/static/admin/css/base.css | grep -qi '^content-type: text/css'"
 fi
 
 section "11. Fresh service errors"
