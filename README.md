@@ -1,317 +1,333 @@
-# EKAFY — VPS Application Management Platform
+# EKAFY DJ
 
-> Deploy, monitor, restart, backup, and manage multiple Django projects running on a single Ubuntu 24.04 LTS VPS.
+EKAFY DJ is a Django-based VPS management dashboard. It is designed to run on a single Ubuntu server and help manage Django projects, deployments, services, logs, backups, monitoring, users, and audit records from one web interface.
 
----
+The production installer in this repository deploys the app to:
 
-## Architecture
-
-```
-/srv/ekafy/
-├── dashboard/          ← EKAFY Django project (this codebase)
-│   ├── config/         ← Settings, urls, wsgi, asgi, celery
-│   ├── apps/
-│   │   ├── core/       ← Base models, exceptions, utils
-│   │   ├── projects/   ← Managed project CRUD
-│   │   ├── deployments/← Git pull → pip → migrate → restart pipeline
-│   │   ├── services/   ← Systemd start/stop/restart/status
-│   │   ├── logs/       ← journalctl + file log viewer
-│   │   ├── backups/    ← pg_dump, media archive, S3 upload
-│   │   ├── monitoring/ ← CPU/RAM/disk metrics, health checks
-│   │   ├── users/      ← RBAC user management, invitations
-│   │   └── audit/      ← Immutable audit log
-│   ├── api/            ← DRF REST API (v1)
-│   ├── templates/      ← TailwindCSS + HTMX + AlpineJS
-│   └── scripts/        ← Bash automation scripts
-├── projects/           ← Managed project roots
-├── logs/               ← Aggregated logs
-├── backups/            ← Backup archives
-└── deployments/        ← Deployment manifests
+```text
+/srv/ekafydj
 ```
 
----
+## What The App Includes
 
-## Prerequisites
+- Django dashboard with two-factor login support
+- PostgreSQL database
+- Redis cache and Celery broker
+- Gunicorn application service
+- Celery worker and Celery Beat services
+- Nginx reverse proxy
+- Project deployment, rollback, service control, log viewing, backups, monitoring, users, and audit pages
+- DRF API under `/api/v1/`
 
-- Ubuntu 24.04 LTS
-- Python 3.12
-- PostgreSQL 16
-- Redis 7
-- Nginx
-- Node.js 20+ (for TailwindCSS build)
+## Repository Layout
 
----
+```text
+.
+|-- dashboard/
+|   |-- config/          Django settings, URLs, WSGI, ASGI, Celery
+|   |-- api/             DRF router
+|   |-- apps/
+|   |   |-- audit/       Audit log
+|   |   |-- backups/     Backup records and backup tasks
+|   |   |-- core/        Shared helpers, permissions, context
+|   |   |-- deployments/ Deployment history and task execution
+|   |   |-- logs/        Log viewer
+|   |   |-- monitoring/  System metrics and health checks
+|   |   |-- projects/    Managed project CRUD
+|   |   |-- services/    systemd service actions
+|   |   `-- users/       Custom user model and roles
+|   |-- scripts/         Server automation scripts
+|   `-- templates/       Django templates
+|-- requirements/
+|   |-- base.txt
+|   |-- development.txt
+|   `-- production.txt
+|-- install.sh           Clean production installer
+|-- Makefile             Local development commands
+`-- .env.example         Environment variable template
+```
 
-## Quick Start (Development)
+## Production Install
+
+Run the installer on the Ubuntu server.
 
 ```bash
-# 1. Clone the repo
-git clone git@github.com:yourorg/ekafy.git /srv/ekafy
-cd /srv/ekafy
+chmod +x install.sh
+sudo ./install.sh
+```
 
-# 2. Copy environment file
+Important: `install.sh` is a clean installer. It removes and recreates `/srv/ekafydj`.
+
+The installer currently does the following:
+
+1. Stops `ekafydj-dashboard` if it exists.
+2. Deletes `/srv/ekafydj`.
+3. Installs system packages: Git, Curl, Nginx, Redis, PostgreSQL, Python venv/dev packages, build tools, libpq, and OpenSSL.
+4. Creates the system user `ekafy`.
+5. Clones the repository into `/srv/ekafydj`.
+6. Creates `/srv/ekafydj/.venv`.
+7. Installs production Python requirements, `phonenumbers`, and `gunicorn`.
+8. Creates a fresh database password and Django `SECRET_KEY`.
+9. Creates or updates:
+   - database: `ekafydj_db`
+   - database user: `ekafydj_user`
+   - env file: `/srv/ekafydj/dashboard/.env`
+10. Creates platform folders:
+   - `/srv/ekafydj/logs`
+   - `/srv/ekafydj/projects`
+   - `/srv/ekafydj/backups`
+   - `/srv/ekafydj/deployments`
+11. Verifies the Django database connection.
+12. Runs migrations.
+13. Updates old Celery Beat task names if needed.
+14. Collects static files.
+15. Creates and enables systemd services:
+   - `ekafydj-dashboard`
+   - `ekafydj-celery`
+   - `ekafydj-celery-beat`
+16. Creates the Nginx site `/etc/nginx/sites-available/ekafydj`.
+17. Enables the Nginx site and reloads Nginx.
+
+After a successful install, open:
+
+```text
+http://SERVER_IP/account/login/
+```
+
+The installer runs the post-install verifier before printing the final completion message. If you want to run the verifier again manually:
+
+```bash
+sudo bash /srv/ekafydj/dashboard/scripts/verify_install.sh
+```
+
+To allow the verifier to apply safe repairs for common drift, such as resetting the PostgreSQL role password from `.env` and restarting EKAFY services:
+
+```bash
+sudo bash /srv/ekafydj/dashboard/scripts/verify_install.sh --fix
+```
+
+## Production Paths
+
+| Purpose | Path |
+| --- | --- |
+| App root | `/srv/ekafydj` |
+| Django project | `/srv/ekafydj/dashboard` |
+| Virtualenv | `/srv/ekafydj/.venv` |
+| Env file | `/srv/ekafydj/dashboard/.env` |
+| Static files | `/srv/ekafydj/dashboard/staticfiles` |
+| Media files | `/srv/ekafydj/dashboard/media` |
+| Logs | `/srv/ekafydj/logs` |
+| Managed projects | `/srv/ekafydj/projects` |
+| Backups | `/srv/ekafydj/backups` |
+| Deployments | `/srv/ekafydj/deployments` |
+
+## Production Services
+
+```bash
+sudo systemctl status ekafydj-dashboard --no-pager
+sudo systemctl status ekafydj-celery --no-pager
+sudo systemctl status ekafydj-celery-beat --no-pager
+```
+
+Restart services:
+
+```bash
+sudo systemctl restart ekafydj-dashboard
+sudo systemctl restart ekafydj-celery
+sudo systemctl restart ekafydj-celery-beat
+```
+
+View logs:
+
+```bash
+sudo journalctl -u ekafydj-dashboard -n 120 --no-pager -l
+sudo journalctl -u ekafydj-celery -n 120 --no-pager -l
+sudo journalctl -u ekafydj-celery-beat -n 120 --no-pager -l
+sudo tail -n 120 /srv/ekafydj/logs/ekafy_dashboard.log
+```
+
+## Create An Admin User
+
+After installation:
+
+```bash
+cd /srv/ekafydj/dashboard
+sudo -u ekafy env DJANGO_SETTINGS_MODULE=config.settings.production /srv/ekafydj/.venv/bin/python manage.py createsuperuser
+```
+
+Superusers are treated as admins by the app.
+
+## Production Environment
+
+The installer writes `/srv/ekafydj/dashboard/.env`.
+
+Main values:
+
+```env
+DJANGO_SETTINGS_MODULE=config.settings.production
+DB_NAME=ekafydj_db
+DB_USER=ekafydj_user
+DB_HOST=localhost
+DB_PORT=5432
+REDIS_URL=redis://127.0.0.1:6379/0
+CELERY_BROKER_URL=redis://127.0.0.1:6379/1
+CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/2
+EKAFY_BASE_DIR=/srv/ekafydj
+EKAFY_LOGS_DIR=/srv/ekafydj/logs
+```
+
+If PostgreSQL password authentication fails, reset the database role from the deployed `.env`:
+
+```bash
+cd /srv/ekafydj/dashboard
+
+DB_USER=$(sudo awk -F= '/^DB_USER=/{gsub(/\r/,""); print $2}' .env)
+DB_PASSWORD=$(sudo awk -F= '/^DB_PASSWORD=/{gsub(/\r/,""); print $2}' .env)
+DB_NAME=$(sudo awk -F= '/^DB_NAME=/{gsub(/\r/,""); print $2}' .env)
+
+sudo -u postgres psql -c "ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';"
+sudo env PGPASSWORD="$DB_PASSWORD" psql -h localhost -U "$DB_USER" -d "$DB_NAME" -c "select current_user;"
+```
+
+## Local Development
+
+The Makefile is for local development, not for the VPS production install.
+
+Requirements:
+
+- Python 3.12 available as `python3.12`
+- PostgreSQL/Redis configured for your local `.env`
+- Bash-like shell for the Makefile commands
+
+Start from the repository root:
+
+```bash
 cp .env.example dashboard/.env
-# Edit dashboard/.env with your values
-
-# 3. First-time setup (creates venv, installs deps, migrates, creates superuser)
 make setup
-
-# 4. Start development server
 make dev
-# → http://localhost:8000
-
-# 5. Start Celery worker (in a separate terminal)
-make worker
-
-# 6. Start Celery beat scheduler (in a separate terminal)
-make beat
 ```
 
----
+The development server runs on:
 
-## Production Deployment on Ubuntu 24.04
-
-### 1. System packages
-
-```bash
-sudo apt update && sudo apt install -y \
-    python3.12 python3.12-venv python3.12-dev \
-    postgresql-16 libpq-dev \
-    redis-server nginx git curl
-
-sudo systemctl enable --now postgresql redis-server nginx
+```text
+http://localhost:8000
 ```
 
-### 2. Create ekafy system user
+## Makefile Commands
 
-```bash
-sudo useradd --system --home /srv/ekafy --shell /bin/bash ekafy
-sudo mkdir -p /srv/ekafy
-sudo chown ekafy:ekafy /srv/ekafy
-```
+The Makefile uses these defaults:
 
-### 3. Clone and configure
+| Variable | Value | Meaning |
+| --- | --- | --- |
+| `PYTHON` | `python3.12` | Python executable used to create `.venv` |
+| `VENV` | `.venv` | Local virtualenv folder |
+| `SETTINGS` | `config.settings.development` | Default Django settings module for dev commands |
+| `MANAGE` | `.venv/bin/python dashboard/manage.py` | Manage.py command path |
+| `CELERY` | `.venv/bin/celery` | Celery executable path |
 
-```bash
-sudo -u ekafy git clone git@github.com:yourorg/ekafy.git /srv/ekafy
-cd /srv/ekafy
-sudo -u ekafy cp .env.example dashboard/.env
-sudo -u ekafy nano dashboard/.env  # Fill in production values
-```
+Available targets:
 
-### 4. Setup virtualenv and dependencies
+| Command | What it does | When to use it |
+| --- | --- | --- |
+| `make help` | Prints the command list | When you forget the target names |
+| `make setup` | Runs `install`, `migrate`, then `createsuperuser` | First local setup |
+| `make install` | Creates `.venv`, upgrades packaging tools, installs `requirements/development.txt` | Install or refresh local Python dependencies |
+| `make dev` | Runs `python manage.py runserver 0.0.0.0:8000` using development settings | Start local Django server |
+| `make migrate` | Runs Django migrations using development settings | Apply database migrations locally |
+| `make makemigrations` | Creates new Django migration files | After changing models |
+| `make createsuperuser` | Runs Django `createsuperuser` using development settings | Create a local admin user |
+| `make collectstatic` | Runs `collectstatic` using production settings | Check/static-build production assets locally |
+| `make test` | Runs pytest with testing settings | Full test run |
+| `make test-fast` | Runs pytest quietly with `--no-cov` | Faster test run while developing |
+| `make lint` | Runs Ruff on `dashboard/` and mypy on `dashboard/apps/` | Code quality checks |
+| `make worker` | Starts a local Celery worker with development settings | Test background tasks locally |
+| `make beat` | Starts a local Celery Beat scheduler with development settings | Test scheduled tasks locally |
+| `make shell` | Opens Django `shell_plus` with development settings | Inspect or modify local app data |
+| `make logs` | Tails `/srv/ekafydj/logs/ekafy_dashboard.log` | Watch production-style dashboard logs on a server |
 
-```bash
-sudo -u ekafy python3.12 -m venv .venv
-sudo -u ekafy .venv/bin/pip install -r requirements/production.txt
-```
+Notes:
 
-### 5. Database and migrations
+- `make setup` will ask for superuser details because it includes `createsuperuser`.
+- `make collectstatic` uses production settings intentionally.
+- `make logs` points to the production log path, so it is mainly useful on the server.
+- Production deployment should use `sudo ./install.sh`, not `make setup`.
 
-```bash
-sudo -u postgres createuser ekafy_user
-sudo -u postgres createdb ekafy_db -O ekafy_user
-sudo -u postgres psql -c "ALTER USER ekafy_user WITH PASSWORD 'your-password';"
+## URLs
 
-cd /srv/ekafy/dashboard
-sudo -u ekafy DJANGO_SETTINGS_MODULE=config.settings.production \
-    ../.venv/bin/python manage.py migrate
-sudo -u ekafy DJANGO_SETTINGS_MODULE=config.settings.production \
-    ../.venv/bin/python manage.py createsuperuser
-sudo -u ekafy DJANGO_SETTINGS_MODULE=config.settings.production \
-    ../.venv/bin/python manage.py collectstatic --noinput
-```
-
-### 6. Systemd units for EKAFY dashboard
-
-```bash
-# Gunicorn socket
-sudo tee /etc/systemd/system/ekafy-dashboard.socket <<EOF
-[Unit]
-Description=EKAFY Dashboard Gunicorn Socket
-
-[Socket]
-ListenStream=/run/gunicorn/ekafy-dashboard.sock
-
-[Install]
-WantedBy=sockets.target
-EOF
-
-# Gunicorn service
-sudo tee /etc/systemd/system/ekafy-dashboard.service <<EOF
-[Unit]
-Description=EKAFY Dashboard Gunicorn
-Requires=ekafy-dashboard.socket
-After=network.target
-
-[Service]
-Type=notify
-User=ekafy
-Group=www-data
-WorkingDirectory=/srv/ekafy/dashboard
-ExecStart=/srv/ekafy/.venv/bin/gunicorn \
-    --workers 4 --bind unix:/run/gunicorn/ekafy-dashboard.sock \
-    --log-level info \
-    --access-logfile /srv/ekafy/logs/dashboard_access.log \
-    config.wsgi:application
-Environment=DJANGO_SETTINGS_MODULE=config.settings.production
-EnvironmentFile=/srv/ekafy/dashboard/.env
-Restart=on-failure
-PrivateTmp=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Celery worker
-sudo tee /etc/systemd/system/ekafy-celery.service <<EOF
-[Unit]
-Description=EKAFY Celery Worker
-After=network.target redis.service
-
-[Service]
-Type=forking
-User=ekafy
-Group=ekafy
-WorkingDirectory=/srv/ekafy/dashboard
-ExecStart=/srv/ekafy/.venv/bin/celery -A config.celery worker --loglevel=info --concurrency=4 --detach
-EnvironmentFile=/srv/ekafy/dashboard/.env
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Celery beat
-sudo tee /etc/systemd/system/ekafy-celery-beat.service <<EOF
-[Unit]
-Description=EKAFY Celery Beat Scheduler
-After=network.target redis.service
-
-[Service]
-Type=simple
-User=ekafy
-WorkingDirectory=/srv/ekafy/dashboard
-ExecStart=/srv/ekafy/.venv/bin/celery -A config.celery beat --loglevel=info
-EnvironmentFile=/srv/ekafy/dashboard/.env
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now ekafy-dashboard.socket ekafy-dashboard.service
-sudo systemctl enable --now ekafy-celery ekafy-celery-beat
-```
-
-### 7. Nginx configuration
-
-```bash
-sudo tee /etc/nginx/sites-available/ekafy <<EOF
-upstream ekafy_dashboard {
-    server unix:/run/gunicorn/ekafy-dashboard.sock fail_timeout=0;
-}
-
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    client_max_body_size 100M;
-
-    location /static/ {
-        alias /srv/ekafy/dashboard/staticfiles/;
-        expires 30d;
-    }
-
-    location /media/ {
-        alias /srv/ekafy/dashboard/media/;
-    }
-
-    location / {
-        proxy_set_header Host \$http_host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_pass http://ekafy_dashboard;
-    }
-}
-EOF
-
-sudo ln -s /etc/nginx/sites-available/ekafy /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-
-# Enable HTTPS
-sudo certbot --nginx -d your-domain.com
-```
-
-### 8. Sudo permissions for EKAFY scripts
-
-```bash
-# Allow ekafy user to manage project services and run scripts
-sudo tee /etc/sudoers.d/ekafy <<EOF
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/systemctl start ekafy-*.service
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop ekafy-*.service
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ekafy-*.service
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload ekafy-*.service
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/systemctl status ekafy-*.service
-ekafy ALL=(ALL) NOPASSWD: /usr/bin/journalctl
-ekafy ALL=(ALL) NOPASSWD: /usr/sbin/nginx
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl start ekafy-*.service
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop ekafy-*.service
-www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart ekafy-*.service
-EOF
-sudo chmod 440 /etc/sudoers.d/ekafy
-```
-
----
-
-## Development Commands
-
-| Command | Description |
-|---------|-------------|
-| `make setup` | First-time setup (venv + deps + db + superuser) |
-| `make dev` | Start development server on :8000 |
-| `make test` | Run full pytest suite with coverage |
-| `make test-fast` | Run tests without coverage (faster) |
-| `make lint` | ruff + mypy checks |
-| `make migrate` | Apply Django migrations |
-| `make worker` | Start Celery worker |
-| `make beat` | Start Celery beat scheduler |
-| `make shell` | Django shell_plus |
-| `make logs` | Tail EKAFY dashboard log |
-
----
+| URL | Purpose |
+| --- | --- |
+| `/account/login/` | Login |
+| `/account/logout/` | Logout |
+| `/` | Dashboard index |
+| `/list/` | Project list |
+| `/new/` | Create project |
+| `/deployments/` | Deployment list |
+| `/services/<slug>/status/` | Project service status |
+| `/logs/<slug>/` | Project log viewer |
+| `/backups/` | Backup list |
+| `/monitoring/` | Monitoring dashboard |
+| `/users/` | User management |
+| `/audit/` | Audit log |
+| `/api/v1/` | REST API |
+| `/django-admin/` | Django admin |
 
 ## REST API
 
-Base URL: `/api/v1/`
+Base path:
 
-| Endpoint | Methods | Description |
-|----------|---------|-------------|
-| `/api/v1/projects/` | GET, POST | List / create projects |
-| `/api/v1/projects/{slug}/` | GET, PUT, DELETE | Project detail |
-| `/api/v1/projects/{slug}/deploy/` | POST | Trigger deployment |
-| `/api/v1/projects/{slug}/status/` | GET | Systemd service status |
-| `/api/v1/deployments/` | GET | List deployments |
-| `/api/v1/backups/` | GET | List backups |
-| `/api/v1/backups/trigger/` | POST | Trigger backup |
-| `/api/v1/metrics/` | GET | System metrics (last 500) |
+```text
+/api/v1/
+```
 
-Authentication: Session or JWT (`Authorization: Bearer <token>`)
+Registered API resources:
 
----
+| Endpoint | Purpose |
+| --- | --- |
+| `/api/v1/projects/` | Projects |
+| `/api/v1/deployments/` | Deployments |
+| `/api/v1/backups/` | Backups |
+| `/api/v1/metrics/` | System metrics |
 
-## User Roles
+Authentication is handled by Django session auth or JWT, depending on the endpoint/client.
 
-| Role | Permissions |
-|------|-------------|
-| **Admin** | Full access: create/delete projects, manage users, view audit log |
-| **Operator** | Deploy, restart, backup, view logs, create projects |
-| **Viewer** | Read-only: view dashboard, projects, deployments, backups |
+## Roles
 
----
+| Role | Access |
+| --- | --- |
+| Admin | Full access. Superusers are also treated as admins. |
+| Operator | Operational access such as deploys, restarts, backups, and logs. |
+| Viewer | Read-only dashboard access. |
+
+## Common Troubleshooting
+
+Check whether the app is reachable through Gunicorn:
+
+```bash
+curl -I http://127.0.0.1:8000/account/login/
+```
+
+Check whether it is reachable through Nginx:
+
+```bash
+curl -I http://127.0.0.1/account/login/
+```
+
+If Nginx warns about duplicate `server_name _`, list enabled sites:
+
+```bash
+ls -l /etc/nginx/sites-enabled/
+sudo grep -R "server_name _" -n /etc/nginx/sites-enabled /etc/nginx/sites-available
+```
+
+If login gives HTTP 500, read the Django traceback:
+
+```bash
+sudo journalctl -u ekafydj-dashboard -n 120 --no-pager -l
+sudo tail -n 120 /srv/ekafydj/logs/ekafy_dashboard.log
+```
+
+If Celery Beat sends unregistered task names, rerun the installer or run migrations from `/srv/ekafydj/dashboard`; the installer updates old Beat task names after migration.
 
 ## License
 
-Proprietary — All rights reserved.
+Proprietary. All rights reserved.

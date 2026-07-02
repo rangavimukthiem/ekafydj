@@ -300,6 +300,13 @@ sudo ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/${AP
 sudo nginx -t && sudo systemctl reload nginx
 
 ########################################
+# 12. POST-INSTALL VERIFICATION
+########################################
+echo "Running post-install verification..."
+sleep 2
+sudo bash "${APP_DIR}/dashboard/scripts/verify_install.sh"
+
+########################################
 # DONE
 ########################################
 echo "======================================"
