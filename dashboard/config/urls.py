@@ -10,7 +10,8 @@ urlpatterns = [
     path("django-admin/", admin.site.urls),
 
     # Some django-two-factor-auth templates reverse plain "logout".
-    # Keep this alias while the namespaced two_factor URLs remain canonical.
+    # Keep global aliases while the namespaced two_factor URLs remain canonical.
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("account/logout/", LogoutView.as_view(), name="logout"),
     path("", include(two_factor_urlpatterns)),
 

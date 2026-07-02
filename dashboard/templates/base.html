@@ -109,9 +109,9 @@
             <p class="text-xs text-surface-400 capitalize">{{ user.role }}</p>
           </div>
         </a>
-        <a href="{% url 'two_factor:logout' %}"
+        <a href="{% url 'logout' %}"
            class="mt-1 flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-red-900/30 hover:text-red-400 transition-colors text-surface-400 text-sm overflow-hidden"
-           hx-post="{% url 'two_factor:logout' %}" hx-push-url="true">
+           hx-post="{% url 'logout' %}" hx-push-url="true">
           <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
           </svg>
