@@ -124,21 +124,26 @@ fi
 ########################################
 echo "🐘 Setting up database..."
 
-# DB_PASS=$(openssl rand -hex 24)
-# SECRET_KEY=$(openssl rand -hex 48)
-
 DB_PASS=$(openssl rand -hex 32)
 SECRET_KEY=$(openssl rand -hex 48)
 
-sudo -u postgres psql -tc \
-"SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
-sudo -u postgres psql -c \
-"CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -qx 1; then
+    echo "PostgreSQL role exists: ${DB_USER}. Updating password only."
+    sudo -u postgres psql -c \
+    "ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+else
+    echo "PostgreSQL role missing: ${DB_USER}. Creating role."
+    sudo -u postgres psql -c \
+    "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+fi
 
-sudo -u postgres psql -c \
-"ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+if sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -qx 1; then
+    echo "PostgreSQL database exists: ${DB_NAME}."
+else
+    echo "PostgreSQL database missing: ${DB_NAME}. Creating database."
+    sudo -u postgres createdb "${DB_NAME}" -O "${DB_USER}"
+fi
 
-sudo -u postgres createdb "${DB_NAME}" -O "${DB_USER}" 2>/dev/null || true
 sudo -u postgres psql -c \
 "ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};"
 sudo -u postgres psql -d "${DB_NAME}" -c \
