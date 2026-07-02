@@ -197,6 +197,9 @@ sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py 
 
 sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py migrate
 
+sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py shell -c \
+    "from django_celery_beat.models import PeriodicTask; mapping={'apps.monitoring.tasks.collect_system_metrics':'monitoring.collect_system_metrics','apps.monitoring.tasks.check_project_health':'monitoring.check_project_health','apps.backups.tasks.run_scheduled_backups':'backups.run_scheduled_backups','apps.deployments.tasks.cleanup_old_deployment_logs':'deployments.cleanup_old_deployment_logs','apps.monitoring.tasks.cleanup_old_metrics':'monitoring.cleanup_old_metrics'}; [PeriodicTask.objects.filter(task=old).update(task=new) for old,new in mapping.items()]; print('Celery beat task names OK')"
+
 sudo -u "${APP_USER}" env "${DJANGO_ENV[@]}" "${VENV_DIR}/bin/python" manage.py collectstatic --noinput || true
 
 ########################################
