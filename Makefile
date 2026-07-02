@@ -73,4 +73,4 @@ shell:
 	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py shell_plus
 
 logs:
-	tail -f /srv/ekafy/logs/ekafy_dashboard.log
+	tail -f /srv/ekafydj/logs/ekafy_dashboard.log

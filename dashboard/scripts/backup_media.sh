@@ -9,8 +9,9 @@
 set -euo pipefail
 
 SLUG="${1:?SLUG required}"
-PROJECTS_BASE="${2:-/srv/ekafy/projects}"
-BACKUPS_DIR="${3:-/srv/ekafy/backups}"
+EKAFY_BASE_DIR="${EKAFY_BASE_DIR:-/srv/ekafydj}"
+PROJECTS_BASE="${2:-${EKAFY_PROJECTS_DIR:-$EKAFY_BASE_DIR/projects}}"
+BACKUPS_DIR="${3:-${EKAFY_BACKUPS_DIR:-$EKAFY_BASE_DIR/backups}}"
 
 MEDIA_DIR="$PROJECTS_BASE/$SLUG/media"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)

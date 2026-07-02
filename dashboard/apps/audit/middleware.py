@@ -19,5 +19,7 @@ class AuditMiddleware:
 
     def __call__(self, request):
         _local.request = request
-        response = self.get_response(request)
-        return response
+        try:
+            return self.get_response(request)
+        finally:
+            _local.request = None

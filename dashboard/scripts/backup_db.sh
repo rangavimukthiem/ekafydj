@@ -12,7 +12,8 @@ SLUG="${1:?SLUG required}"
 DB_NAME="${2:?DB_NAME required}"
 DB_USER="${3:?DB_USER required}"
 DB_PASSWORD="${4:?DB_PASSWORD required}"
-BACKUPS_DIR="${5:-/srv/ekafy/backups}"
+EKAFY_BASE_DIR="${EKAFY_BASE_DIR:-/srv/ekafydj}"
+BACKUPS_DIR="${5:-${EKAFY_BACKUPS_DIR:-$EKAFY_BASE_DIR/backups}}"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="$BACKUPS_DIR/$SLUG"

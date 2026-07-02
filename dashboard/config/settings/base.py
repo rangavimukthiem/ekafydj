@@ -216,12 +216,12 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="EKAFY <noreply@localh
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ─── EKAFY Platform Paths ─────────────────────────────────────────────────────
-EKAFY_BASE_DIR = config("EKAFY_BASE_DIR", default="/srv/ekafy")
-EKAFY_PROJECTS_DIR = config("EKAFY_PROJECTS_DIR", default="/srv/ekafy/projects")
-EKAFY_LOGS_DIR = config("EKAFY_LOGS_DIR", default="/srv/ekafy/logs")
-EKAFY_BACKUPS_DIR = config("EKAFY_BACKUPS_DIR", default="/srv/ekafy/backups")
-EKAFY_DEPLOYMENTS_DIR = config("EKAFY_DEPLOYMENTS_DIR", default="/srv/ekafy/deployments")
-EKAFY_SCRIPTS_DIR = config("EKAFY_SCRIPTS_DIR", default="/srv/ekafy/dashboard/scripts")
+EKAFY_BASE_DIR = config("EKAFY_BASE_DIR", default="/srv/ekafydj")
+EKAFY_PROJECTS_DIR = config("EKAFY_PROJECTS_DIR", default=f"{EKAFY_BASE_DIR}/projects")
+EKAFY_LOGS_DIR = config("EKAFY_LOGS_DIR", default=f"{EKAFY_BASE_DIR}/logs")
+EKAFY_BACKUPS_DIR = config("EKAFY_BACKUPS_DIR", default=f"{EKAFY_BASE_DIR}/backups")
+EKAFY_DEPLOYMENTS_DIR = config("EKAFY_DEPLOYMENTS_DIR", default=f"{EKAFY_BASE_DIR}/deployments")
+EKAFY_SCRIPTS_DIR = config("EKAFY_SCRIPTS_DIR", default=f"{EKAFY_BASE_DIR}/dashboard/scripts")
 
 # ─── S3 Backups (optional) ────────────────────────────────────────────────────
 USE_S3_BACKUPS = bool_config("USE_S3_BACKUPS", default=False)

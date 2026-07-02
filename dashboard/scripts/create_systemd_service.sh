@@ -20,6 +20,9 @@ BIND="${8:-unix:/run/gunicorn/$SLUG.sock}"
 
 SOCKET_NAME="ekafy-$SLUG.socket"
 GUNICORN="$VENV_PATH/bin/gunicorn"
+EKAFY_BASE_DIR="${EKAFY_BASE_DIR:-/srv/ekafydj}"
+EKAFY_LOGS_DIR="${EKAFY_LOGS_DIR:-$EKAFY_BASE_DIR/logs}"
+mkdir -p "$EKAFY_LOGS_DIR"
 
 echo "=== [EKAFY] Creating systemd units for: $SLUG ==="
 
@@ -54,8 +57,8 @@ ExecStart=$GUNICORN \\
     --timeout 120 \\
     --bind $BIND \\
     --log-level info \\
-    --access-logfile /srv/ekafy/logs/${SLUG}_access.log \\
-    --error-logfile /srv/ekafy/logs/${SLUG}_error.log \\
+    --access-logfile $EKAFY_LOGS_DIR/${SLUG}_access.log \\
+    --error-logfile $EKAFY_LOGS_DIR/${SLUG}_error.log \\
     $WSGI_MODULE
 Environment=DJANGO_SETTINGS_MODULE=$SETTINGS_MODULE
 PrivateTmp=true

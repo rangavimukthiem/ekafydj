@@ -9,7 +9,8 @@
 set -euo pipefail
 
 PROJECT_SLUG="${1:?SLUG required}"
-PROJECTS_BASE="${2:-/srv/ekafy/projects}"
+EKAFY_BASE_DIR="${EKAFY_BASE_DIR:-/srv/ekafydj}"
+PROJECTS_BASE="${2:-${EKAFY_PROJECTS_DIR:-$EKAFY_BASE_DIR/projects}}"
 SETTINGS_MODULE="${3:-config.settings.production}"
 
 PROJECT_DIR="$PROJECTS_BASE/$PROJECT_SLUG"
@@ -20,7 +21,9 @@ PIP="$VENV_DIR/bin/pip"
 MANAGE="$REPO_DIR/manage.py"
 SERVICE_NAME="ekafy-$PROJECT_SLUG.service"
 
-LOG_FILE="/srv/ekafy/logs/deploy_${PROJECT_SLUG}_$(date +%Y%m%d_%H%M%S).log"
+EKAFY_LOGS_DIR="${EKAFY_LOGS_DIR:-$EKAFY_BASE_DIR/logs}"
+mkdir -p "$EKAFY_LOGS_DIR"
+LOG_FILE="$EKAFY_LOGS_DIR/deploy_${PROJECT_SLUG}_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "=== [EKAFY] Deploying: $PROJECT_SLUG ==="

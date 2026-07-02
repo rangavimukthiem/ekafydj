@@ -11,7 +11,10 @@
 # =============================================================================
 set -euo pipefail
 
-LOG_FILE="/srv/ekafy/logs/scaffold_$(date +%Y%m%d_%H%M%S).log"
+EKAFY_BASE_DIR="${EKAFY_BASE_DIR:-/srv/ekafydj}"
+EKAFY_LOGS_DIR="${EKAFY_LOGS_DIR:-$EKAFY_BASE_DIR/logs}"
+mkdir -p "$EKAFY_LOGS_DIR"
+LOG_FILE="$EKAFY_LOGS_DIR/scaffold_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 PROJECT_SLUG="${1:?SLUG required}"
@@ -21,7 +24,7 @@ PYTHON_VERSION="${4:-3.12}"
 DB_NAME="${5:?DB_NAME required}"
 DB_USER="${6:?DB_USER required}"
 DB_PASSWORD="${7:?DB_PASSWORD required}"
-PROJECTS_BASE="${8:-/srv/ekafy/projects}"
+PROJECTS_BASE="${8:-${EKAFY_PROJECTS_DIR:-$EKAFY_BASE_DIR/projects}}"
 
 PROJECT_DIR="$PROJECTS_BASE/$PROJECT_SLUG"
 REPO_DIR="$PROJECT_DIR/repo"
@@ -76,14 +79,18 @@ echo "✓ Dependencies installed"
 
 # ── 5. Create PostgreSQL database and user ────────────────────────────────────
 echo "--- Step 5: Creating PostgreSQL database ---"
+if ! sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+  sudo -u postgres psql -c "CREATE USER \"$DB_USER\" WITH PASSWORD '$DB_PASSWORD';"
+fi
+sudo -u postgres psql -c "ALTER USER \"$DB_USER\" WITH PASSWORD '$DB_PASSWORD';"
 if sudo -u postgres psql -lqt | cut -d\| -f1 | grep -qw "$DB_NAME"; then
   echo "  Database '$DB_NAME' already exists — skipping"
 else
-  sudo -u postgres psql -c "CREATE USER \"$DB_USER\" WITH PASSWORD '$DB_PASSWORD';"
   sudo -u postgres psql -c "CREATE DATABASE \"$DB_NAME\" OWNER \"$DB_USER\";"
-  sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE \"$DB_NAME\" TO \"$DB_USER\";"
   echo "✓ Database and user created"
 fi
+sudo -u postgres psql -c "ALTER DATABASE \"$DB_NAME\" OWNER TO \"$DB_USER\";"
+sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL ON SCHEMA public TO \"$DB_USER\";"
 
 # ── 6. Set permissions ────────────────────────────────────────────────────────
 echo "--- Step 6: Setting permissions ---"

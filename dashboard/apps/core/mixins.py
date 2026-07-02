@@ -46,7 +46,7 @@ class AdminRequiredMixin(LoginRequiredMixin):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        if request.user.role != "admin":
+        if not request.user.is_admin:
             messages.error(request, "Administrator access required.")
             from django.shortcuts import redirect
             return redirect("projects:index")
@@ -59,7 +59,7 @@ class OperatorRequiredMixin(LoginRequiredMixin):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        if request.user.role not in ("admin", "operator"):
+        if not request.user.is_operator:
             messages.error(request, "Operator or Administrator access required.")
             from django.shortcuts import redirect
             return redirect("projects:index")

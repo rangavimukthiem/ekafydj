@@ -18,7 +18,7 @@ REPO_URL="https://github.com/rangavimukthiem/ekafydj.git"
 
 BRANCH="main"
 echo "🛑 Stopping service..."
-sudo systemctl stop ekafy || true
+sudo systemctl stop "${APP_NAME}-dashboard" || true
 
 echo "🧹 Cleaning old installation..."
 sudo rm -rf "$APP_DIR"
@@ -168,6 +168,7 @@ SECURE_SSL_REDIRECT=False
 SESSION_COOKIE_SECURE=False
 CSRF_COOKIE_SECURE=False
 EOF
+sudo sed -i 's/\r$//' "${ENV_FILE}"
 sudo chown "${APP_USER}:${APP_GROUP}" "${ENV_FILE}"
 sudo chmod 640 "${ENV_FILE}"
 sudo mkdir -p "${APP_DIR}/logs" "${APP_DIR}/projects" "${APP_DIR}/backups" "${APP_DIR}/deployments"
@@ -206,11 +207,47 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
+sudo tee /etc/systemd/system/${APP_NAME}-celery.service > /dev/null <<EOF
+[Unit]
+Description=EKAFY Celery Worker
+After=network.target redis.service postgresql.service
+
+[Service]
+User=${APP_USER}
+Group=${APP_GROUP}
+WorkingDirectory=${APP_DIR}/dashboard
+EnvironmentFile=${ENV_FILE}
+ExecStart=${VENV_DIR}/bin/celery -A config.celery worker --loglevel=info --concurrency=2
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo tee /etc/systemd/system/${APP_NAME}-celery-beat.service > /dev/null <<EOF
+[Unit]
+Description=EKAFY Celery Beat
+After=network.target redis.service postgresql.service
+
+[Service]
+User=${APP_USER}
+Group=${APP_GROUP}
+WorkingDirectory=${APP_DIR}/dashboard
+EnvironmentFile=${ENV_FILE}
+ExecStart=${VENV_DIR}/bin/celery -A config.celery beat --loglevel=info
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 ########################################
 # 10. ENABLE SERVICE
 ########################################
 sudo systemctl daemon-reload
 sudo systemctl enable --now ${APP_NAME}-dashboard
+sudo systemctl enable --now ${APP_NAME}-celery
+sudo systemctl enable --now ${APP_NAME}-celery-beat
 
 ########################################
 # 11. NGINX
@@ -227,10 +264,15 @@ server {
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /static/ {
         alias ${APP_DIR}/dashboard/staticfiles/;
+    }
+
+    location /media/ {
+        alias ${APP_DIR}/dashboard/media/;
     }
 }
 EOF

@@ -47,11 +47,11 @@ class EkafyUser(AbstractUser):
 
     @property
     def is_admin(self) -> bool:
-        return self.role == self.Role.ADMIN
+        return self.is_superuser or self.role == self.Role.ADMIN
 
     @property
     def is_operator(self) -> bool:
-        return self.role in (self.Role.ADMIN, self.Role.OPERATOR)
+        return self.is_admin or self.role == self.Role.OPERATOR
 
     @property
     def is_viewer(self) -> bool:

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load core_extras %}
 {% block title %}Logs — {{ project.name }} — EKAFY{% endblock %}
 {% block page_title %}Logs / {{ project.name }}{% endblock %}
 
@@ -9,8 +10,6 @@
   <div class="flex flex-wrap items-center gap-3">
     <!-- Log type tabs -->
     <div class="flex bg-surface-800 border border-surface-600 rounded-lg p-1 gap-1">
-      {% for t, label in forloop.parentloop.counter|default:0 %}{% endfor %}
-      {% with types="journal,nginx_access,nginx_error" %}
       {% for t in "journal,nginx_access,nginx_error"|split:"," %}
       <a href="?type={{ t }}&lines={{ lines }}&search={{ search }}"
          hx-get="?type={{ t }}&lines={{ lines }}&search={{ search }}"
@@ -21,7 +20,6 @@
         {% if t == 'journal' %}systemd Journal{% elif t == 'nginx_access' %}Nginx Access{% elif t == 'nginx_error' %}Nginx Error{% endif %}
       </a>
       {% endfor %}
-      {% endwith %}
     </div>
 
     <!-- Lines selector -->

@@ -13,7 +13,7 @@ class IsAdminRole(BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == "admin"
+            and request.user.is_admin
         )
 
 
@@ -26,7 +26,7 @@ class IsOperatorOrAdmin(BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role in ("admin", "operator")
+            and request.user.is_operator
         )
 
 
