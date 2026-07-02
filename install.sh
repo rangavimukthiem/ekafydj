@@ -132,7 +132,14 @@ sudo -u postgres psql -tc \
 sudo -u postgres psql -c \
 "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
 
+sudo -u postgres psql -c \
+"ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASS}';"
+
 sudo -u postgres createdb "${DB_NAME}" -O "${DB_USER}" 2>/dev/null || true
+sudo -u postgres psql -c \
+"ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};"
+sudo -u postgres psql -d "${DB_NAME}" -c \
+"GRANT ALL ON SCHEMA public TO ${DB_USER};"
 
 echo "DB OK: ${DB_NAME}"
 
