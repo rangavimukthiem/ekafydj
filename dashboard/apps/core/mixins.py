@@ -49,7 +49,7 @@ class AdminRequiredMixin(LoginRequiredMixin):
         if request.user.role != "admin":
             messages.error(request, "Administrator access required.")
             from django.shortcuts import redirect
-            return redirect("dashboard:index")
+            return redirect("projects:index")
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -62,5 +62,5 @@ class OperatorRequiredMixin(LoginRequiredMixin):
         if request.user.role not in ("admin", "operator"):
             messages.error(request, "Operator or Administrator access required.")
             from django.shortcuts import redirect
-            return redirect("dashboard:index")
+            return redirect("projects:index")
         return super().dispatch(request, *args, **kwargs)

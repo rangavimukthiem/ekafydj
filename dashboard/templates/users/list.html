@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Users | EKAFY{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-center justify-between gap-4">
+    <h1 class="text-2xl font-semibold">Users</h1>
+    <a href="{% url 'users:invite' %}" class="rounded bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500">Invite User</a>
+  </div>
+  <div class="overflow-hidden rounded border border-surface-700">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-surface-800 text-surface-400">
+        <tr>
+          <th class="px-4 py-3">User</th>
+          <th class="px-4 py-3">Email</th>
+          <th class="px-4 py-3">Role</th>
+          <th class="px-4 py-3">Active</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for item in users %}
+        <tr>
+          <td class="px-4 py-3 font-medium">{{ item.display_name }}</td>
+          <td class="px-4 py-3">{{ item.email|default:"-" }}</td>
+          <td class="px-4 py-3">{{ item.get_role_display }}</td>
+          <td class="px-4 py-3">{{ item.is_active|yesno:"Yes,No" }}</td>
+          <td class="px-4 py-3 text-right"><a class="text-brand-400 hover:text-brand-300" href="{% url 'users:detail' item.pk %}">Open</a></td>
+        </tr>
+        {% empty %}
+        <tr><td class="px-4 py-6 text-surface-400" colspan="5">No users found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

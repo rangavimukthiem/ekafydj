@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Backups | EKAFY{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <h1 class="text-2xl font-semibold">Backups</h1>
+  <div class="overflow-hidden rounded border border-surface-700">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-surface-800 text-surface-400">
+        <tr>
+          <th class="px-4 py-3">Project</th>
+          <th class="px-4 py-3">Type</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Size</th>
+          <th class="px-4 py-3">Created</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for backup in backups %}
+        <tr>
+          <td class="px-4 py-3">{{ backup.project.name }}</td>
+          <td class="px-4 py-3">{{ backup.get_backup_type_display }}</td>
+          <td class="px-4 py-3">{{ backup.get_status_display }}</td>
+          <td class="px-4 py-3">{{ backup.file_size_human }}</td>
+          <td class="px-4 py-3">{{ backup.created_at }}</td>
+          <td class="px-4 py-3 text-right">
+            {% if backup.status == 'success' %}
+            <a class="text-brand-400 hover:text-brand-300" href="{% url 'backups:download' backup.pk %}">Download</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td class="px-4 py-6 text-surface-400" colspan="6">No backups yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

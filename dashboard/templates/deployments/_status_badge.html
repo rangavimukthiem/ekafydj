@@ -1,0 +1,8 @@
+<span class="inline-flex rounded px-2 py-1 text-xs font-medium
+{% if deployment.status == 'success' %}bg-green-900/40 text-green-300
+{% elif deployment.status == 'failed' %}bg-red-900/40 text-red-300
+{% elif deployment.status == 'running' %}bg-blue-900/40 text-blue-300
+{% elif deployment.status == 'rolled_back' %}bg-gray-800 text-gray-300
+{% else %}bg-yellow-900/40 text-yellow-300{% endif %}">
+  {{ deployment.get_status_display }}
+</span>

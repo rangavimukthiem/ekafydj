@@ -1,0 +1,7 @@
+<span class="inline-flex rounded px-2 py-1 text-xs font-medium
+{% if project.status == 'active' %}bg-green-900/40 text-green-300
+{% elif project.status == 'failed' %}bg-red-900/40 text-red-300
+{% elif project.status == 'stopped' %}bg-gray-800 text-gray-300
+{% else %}bg-yellow-900/40 text-yellow-300{% endif %}">
+  {{ project.get_status_display }}
+</span>

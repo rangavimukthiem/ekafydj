@@ -5,13 +5,21 @@ Shared across all environments.
 from pathlib import Path
 from decouple import config, Csv
 
+
+def bool_config(name: str, default: bool = False) -> bool:
+    """Read a boolean env var without crashing on unrelated host values."""
+    try:
+        return config(name, default=default, cast=bool)
+    except ValueError:
+        return default
+
 # ─── Paths ────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 APPS_DIR = BASE_DIR / "apps"
 
 # ─── Security ─────────────────────────────────────────────────────────────────
-SECRET_KEY = config("SECRET_KEY")
-DEBUG = config("DEBUG", default=False, cast=bool)
+SECRET_KEY = config("SECRET_KEY", default="unsafe-dev-only-change-me")
+DEBUG = bool_config("DEBUG", default=False)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
 # ─── Application Definition ───────────────────────────────────────────────────
@@ -117,7 +125,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── Authentication ───────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "users.EkafyUser"
 LOGIN_URL = "two_factor:login"
-LOGIN_REDIRECT_URL = "dashboard:index"
+LOGIN_REDIRECT_URL = "projects:index"
 LOGOUT_REDIRECT_URL = "two_factor:login"
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -136,7 +144,7 @@ USE_TZ = True
 # ─── Static & Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
@@ -201,7 +209,7 @@ CELERY_ACKS_LATE = True
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = config("EMAIL_HOST", default="localhost")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_TLS = bool_config("EMAIL_USE_TLS", default=True)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="EKAFY <noreply@localhost>")
@@ -216,7 +224,7 @@ EKAFY_DEPLOYMENTS_DIR = config("EKAFY_DEPLOYMENTS_DIR", default="/srv/ekafy/depl
 EKAFY_SCRIPTS_DIR = config("EKAFY_SCRIPTS_DIR", default="/srv/ekafy/dashboard/scripts")
 
 # ─── S3 Backups (optional) ────────────────────────────────────────────────────
-USE_S3_BACKUPS = config("USE_S3_BACKUPS", default=False, cast=bool)
+USE_S3_BACKUPS = bool_config("USE_S3_BACKUPS", default=False)
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")

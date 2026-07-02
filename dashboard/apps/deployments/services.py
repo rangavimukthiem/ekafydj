@@ -15,6 +15,7 @@ from apps.projects.repositories import ProjectRepository
 
 from .models import Deployment
 from .repositories import DeploymentRepository
+from .tasks import run_deployment, run_rollback
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,6 @@ class DeploymentService:
         )
 
         # Enqueue Celery task
-        from .tasks import run_deployment
         task = run_deployment.apply_async(
             kwargs={"deployment_id": str(deployment.pk)},
             countdown=1,
@@ -205,7 +205,6 @@ class DeploymentService:
             rollback_of=to_deployment,
         )
 
-        from .tasks import run_rollback
         task = run_rollback.apply_async(
             kwargs={
                 "deployment_id": str(rollback.pk),

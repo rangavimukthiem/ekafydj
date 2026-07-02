@@ -125,6 +125,7 @@ fi
 echo "🐘 Setting up database..."
 
 DB_PASS=$(openssl rand -base64 32)
+SECRET_KEY=$(openssl rand -base64 48)
 
 sudo -u postgres psql -tc \
 "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
@@ -135,6 +136,36 @@ sudo -u postgres createdb "${DB_NAME}" -O "${DB_USER}" 2>/dev/null || true
 
 echo "DB OK: ${DB_NAME}"
 
+sudo tee "${ENV_FILE}" > /dev/null <<EOF
+SECRET_KEY=${SECRET_KEY}
+DEBUG=False
+ALLOWED_HOSTS=*
+DJANGO_SETTINGS_MODULE=config.settings.production
+DB_NAME=${DB_NAME}
+DB_USER=${DB_USER}
+DB_PASSWORD=${DB_PASS}
+DB_HOST=localhost
+DB_PORT=5432
+REDIS_URL=redis://127.0.0.1:6379/0
+CELERY_BROKER_URL=redis://127.0.0.1:6379/1
+CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/2
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EKAFY_BASE_DIR=${APP_DIR}
+EKAFY_PROJECTS_DIR=${APP_DIR}/projects
+EKAFY_LOGS_DIR=${APP_DIR}/logs
+EKAFY_BACKUPS_DIR=${APP_DIR}/backups
+EKAFY_DEPLOYMENTS_DIR=${APP_DIR}/deployments
+EKAFY_SCRIPTS_DIR=${APP_DIR}/dashboard/scripts
+USE_S3_BACKUPS=False
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+EOF
+sudo chown "${APP_USER}:${APP_GROUP}" "${ENV_FILE}"
+sudo chmod 640 "${ENV_FILE}"
+sudo mkdir -p "${APP_DIR}/logs" "${APP_DIR}/projects" "${APP_DIR}/backups" "${APP_DIR}/deployments"
+sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}/logs" "${APP_DIR}/projects" "${APP_DIR}/backups" "${APP_DIR}/deployments"
+
 ########################################
 # 8. DJANGO SETUP (CLEAN ORDER)
 ########################################
@@ -142,9 +173,9 @@ echo "🧱 Running Django setup..."
 
 cd "${APP_DIR}/dashboard"
 
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" manage.py migrate
+sudo -u "${APP_USER}" env DJANGO_SETTINGS_MODULE=config.settings.production "${VENV_DIR}/bin/python" manage.py migrate
 
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" manage.py collectstatic --noinput || true
+sudo -u "${APP_USER}" env DJANGO_SETTINGS_MODULE=config.settings.production "${VENV_DIR}/bin/python" manage.py collectstatic --noinput || true
 
 ########################################
 # 9. SYSTEMD SERVICES

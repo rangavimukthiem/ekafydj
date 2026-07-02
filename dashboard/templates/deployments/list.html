@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Deployments | EKAFY{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <h1 class="text-2xl font-semibold">Deployments</h1>
+  <div class="overflow-hidden rounded border border-surface-700">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-surface-800 text-surface-400">
+        <tr>
+          <th class="px-4 py-3">Project</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3">Commit</th>
+          <th class="px-4 py-3">Started</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for deployment in deployments %}
+        <tr>
+          <td class="px-4 py-3">{{ deployment.project.name }}</td>
+          <td class="px-4 py-3">{% include "deployments/_status_badge.html" %}</td>
+          <td class="px-4 py-3 font-mono">{{ deployment.short_commit }}</td>
+          <td class="px-4 py-3">{{ deployment.started_at|default:deployment.created_at }}</td>
+          <td class="px-4 py-3 text-right"><a class="text-brand-400 hover:text-brand-300" href="{% url 'deployments:detail' deployment.pk %}">Open</a></td>
+        </tr>
+        {% empty %}
+        <tr><td class="px-4 py-6 text-surface-400" colspan="5">No deployments yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

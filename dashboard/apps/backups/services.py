@@ -4,13 +4,15 @@ Handles database dumps, media archives, and optional S3 uploads.
 """
 import logging
 import os
+import gzip
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
 
 from apps.audit.services import AuditService
-from apps.core.exceptions import BackupError, ScriptExecutionError
+from apps.core.exceptions import BackupError
 from apps.core.utils import run_command, format_bytes
 from apps.projects.models import Project
 
@@ -89,9 +91,8 @@ class BackupService:
             file_size = Path(file_path).stat().st_size
             file_name = Path(file_path).name
 
-            self.repo.update(
+            backup = self.repo.update(
                 backup,
-                status=Backup.Status.SUCCESS,
                 file_path=str(file_path),
                 file_name=file_name,
                 file_size=file_size,
@@ -101,6 +102,8 @@ class BackupService:
             # Optional S3 upload
             if settings.USE_S3_BACKUPS:
                 self._upload_to_s3(backup, file_path)
+
+            backup = self.repo.update(backup, status=Backup.Status.SUCCESS)
 
             self.audit.log(
                 user=backup.triggered_by,
@@ -149,12 +152,30 @@ class BackupService:
         env = os.environ.copy()
         env["PGPASSWORD"] = project.db_password
 
-        run_command(
-            f'pg_dump -U {project.db_user} -h {project.db_host} -p {project.db_port} '
-            f'{project.db_name} | gzip > {out_path}',
-            env=env,
-            timeout=300,
-        )
+        try:
+            with gzip.open(out_path, "wb") as compressed:
+                result = subprocess.run(
+                    [
+                        "pg_dump",
+                        "-U",
+                        project.db_user,
+                        "-h",
+                        project.db_host,
+                        "-p",
+                        str(project.db_port),
+                        project.db_name,
+                    ],
+                    stdout=compressed,
+                    stderr=subprocess.PIPE,
+                    env=env,
+                    timeout=300,
+                    check=False,
+                )
+        except subprocess.TimeoutExpired as exc:
+            raise BackupError(f"pg_dump timed out for database {project.db_name}") from exc
+
+        if result.returncode != 0:
+            raise BackupError(result.stderr.decode("utf-8", errors="replace"))
         return str(out_path)
 
     def _archive_media(self, project: Project, backup_dir: Path, timestamp: str) -> str:

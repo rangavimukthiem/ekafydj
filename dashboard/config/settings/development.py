@@ -8,16 +8,24 @@ SECRET_KEY = "dev-insecure-secret-key-change-in-prod-ekafy-2024"  # noqa: S105
 ALLOWED_HOSTS = ["*"]
 
 # ─── Development Database (local PostgreSQL or SQLite fallback) ───────────────
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "ekafy_dev",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "localhost",
-        "PORT": "5432",
+if bool_config("USE_POSTGRES", default=False):  # noqa: F405
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("DB_NAME", default="ekafy_dev"),  # noqa: F405
+            "USER": config("DB_USER", default="postgres"),  # noqa: F405
+            "PASSWORD": config("DB_PASSWORD", default="postgres"),  # noqa: F405
+            "HOST": config("DB_HOST", default="localhost"),  # noqa: F405
+            "PORT": config("DB_PORT", default="5432"),  # noqa: F405
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
+        }
+    }
 
 # ─── Email (console output) ───────────────────────────────────────────────────
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

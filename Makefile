@@ -39,38 +39,38 @@ install:
 	@echo "✓ Dependencies installed"
 
 dev:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(VENV)/bin/python manage.py runserver 0.0.0.0:8000
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py runserver 0.0.0.0:8000
 
 migrate:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(VENV)/bin/python manage.py migrate
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py migrate
 
 makemigrations:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(VENV)/bin/python manage.py makemigrations
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py makemigrations
 
 createsuperuser:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(VENV)/bin/python manage.py createsuperuser
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py createsuperuser
 
 collectstatic:
-	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.production $(VENV)/bin/python manage.py collectstatic --noinput
+	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.production ../$(VENV)/bin/python manage.py collectstatic --noinput
 
 test:
-	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.testing $(VENV)/bin/python -m pytest tests/ -v
+	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.testing ../$(VENV)/bin/python -m pytest tests/ -v
 
 test-fast:
-	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.testing $(VENV)/bin/python -m pytest tests/ -q --no-cov
+	cd dashboard && DJANGO_SETTINGS_MODULE=config.settings.testing ../$(VENV)/bin/python -m pytest tests/ -q --no-cov
 
 lint:
 	$(VENV)/bin/ruff check dashboard/
 	$(VENV)/bin/mypy dashboard/apps/
 
 worker:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(CELERY) -A config.celery worker --loglevel=info --concurrency=4
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(CELERY) -A config.celery worker --loglevel=info --concurrency=4
 
 beat:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(CELERY) -A config.celery beat --loglevel=info
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(CELERY) -A config.celery beat --loglevel=info
 
 shell:
-	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) $(VENV)/bin/python manage.py shell_plus
+	cd dashboard && DJANGO_SETTINGS_MODULE=$(SETTINGS) ../$(VENV)/bin/python manage.py shell_plus
 
 logs:
 	tail -f /srv/ekafy/logs/ekafy_dashboard.log
